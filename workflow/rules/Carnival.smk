@@ -4,7 +4,6 @@ rule run_carnival_vanilla:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
         table=join(BASE_ANALYSIS_DIR, "results/diffexp/{contrast}.diffexp.tsv"),
-#        ##fpkm=join(BASE_ANALYSIS_DIR, "#fpkm/all.tsv"),
     output:
         carnival_out=join(
             BASE_ANALYSIS_DIR, "results/carnival/{contrast}_carnival_res.RDS.gz"
@@ -17,7 +16,7 @@ rule run_carnival_vanilla:
         "../envs/carnival.yaml"
     threads: 12
     resources:
-        nr = lambda wildcards, attempt: attempt,
+        nr=lambda wildcards, attempt: attempt,
         mem_mb=81920,
         time_min=(9 * 60) + 20,
     log:
@@ -30,7 +29,6 @@ rule run_inverse_carnival:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
         table=join(BASE_ANALYSIS_DIR, "results/diffexp/{contrast}.diffexp.tsv"),
-        #fpkm=join(BASE_ANALYSIS_DIR, "#fpkm/all.tsv"),
     output:
         carnival_out=join(
             BASE_ANALYSIS_DIR, "results/inversecarnival/{contrast}_carnival_res.RDS.gz"
@@ -47,7 +45,7 @@ rule run_inverse_carnival:
     resources:
         mem_mb=get_mem_mb,
         time_min=(25 * 60) + 40,
-        nr = lambda wildcards, attempt: attempt
+        nr=lambda wildcards, attempt: attempt,
     log:
         "logs/carnival/{contrast}_carn.log",
     script:
@@ -99,12 +97,9 @@ rule carnival_joint_report:
         "../scripts/RMD_scripts/carnival_join.Rmd"
 
 
-
-
 rule run_sample_dorothea:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/rlog_transform.RDS.gz"),
-        #fpkm=join(BASE_ANALYSIS_DIR, "#fpkm/all.tsv"),
     output:
         sample_dorothea_table=join(
             BASE_ANALYSIS_DIR, "dorothea/TF_act_sample_resolution.csv"
@@ -124,7 +119,6 @@ rule run_sample_dorothea:
 rule run_sample_progeny:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/rlog_transform.RDS.gz"),
-        #fpkm=join(BASE_ANALYSIS_DIR, "#fpkm/all.tsv"),
     output:
         sample_progeny_table=join(BASE_ANALYSIS_DIR, "progeny/sample_progney.csv"),
     conda:
@@ -137,8 +131,6 @@ rule run_sample_progeny:
         "logs/sample_dorothea/report.log",
     script:
         "../scripts/transcriptutorial/sample_resolution_progeny.R"
-
-
 
 
 rule run_sample_carnival:
@@ -159,8 +151,8 @@ rule run_sample_carnival:
     threads: 8
     resources:
         mem_mb=get_mem_mb,
-        time_min=(9* 60) + 20,
-        nr = lambda wildcards, attempt: attempt
+        time_min=(9 * 60) + 20,
+        nr=lambda wildcards, attempt: attempt,
     log:
         "logs/sample_dorothea/{sample}_report.log",
     script:

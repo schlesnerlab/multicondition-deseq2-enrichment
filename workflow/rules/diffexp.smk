@@ -12,21 +12,21 @@ rule count_matrix:
         ),
     output:
         join(BASE_ANALYSIS_DIR, "counts/all.tsv"),
-        join(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
+        join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
     params:
         samples=samples["sample"].tolist(),
         strand=get_strandness(samples),
     conda:
         "../envs/pandas.yaml"
     log:
-        "logs/count_matrix.log"
+        "logs/count_matrix.log",
     script:
         "../scripts/count-matrix.py"
 
 
 rule deseq2_init:
     input:
-        counts=get_count_matrix
+        counts=get_count_matrix,
     output:
         join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
     params:
@@ -37,8 +37,8 @@ rule deseq2_init:
     log:
         "logs/deseq2/init.log",
     resources:
-        mem_mb = 8192,
-        time_min = 59
+        mem_mb=8192,
+        time_min=59,
     threads: get_deseq2_threads()
     script:
         "../scripts/deseq2-init.R"
@@ -46,33 +46,35 @@ rule deseq2_init:
 
 rule pca:
     input:
-        join(BASE_ANALYSIS_DIR,  "deseq2/all.rds"),
+        join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
     output:
-        report(join(BASE_ANALYSIS_DIR, "results/pca.svg"),
-                 "../report/pca.rst"),
+        report(join(BASE_ANALYSIS_DIR, "results/pca.svg"), "../report/pca.rst"),
     params:
         pca_labels=config["pca"]["labels"],
     conda:
         "../envs/deseq2.yaml"
     resources:
-        mem_mb = 8192
+        mem_mb=8192,
     log:
         "logs/pca.log",
     script:
         "../scripts/plot-pca.R"
 
 
-
 rule deseq2:
     input:
-       join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
+        join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
     output:
         table=report(
-            join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"),
+            join(
+                BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"
+            ),
             "../report/diffexp.rst",
         ),
         ma_plot=report(
-            join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.ma-plot.svg"),
+            join(
+                BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.ma-plot.svg"
+            ),
             "../report/ma.rst",
         ),
     params:
@@ -80,7 +82,7 @@ rule deseq2:
     conda:
         "../envs/deseq2.yaml"
     resources:
-        mem_mb = 8192
+        mem_mb=8192,
     log:
         "logs/deseq2/{condition}/{contrast}.diffexp.log",
     threads: get_deseq2_threads()
@@ -99,7 +101,7 @@ rule rlog_transform:
     log:
         "logs/deseq2/rlog_trans.report.log",
     resources:
-        mem_mb = 8192
+        mem_mb=8192,
     threads: 4
     script:
         "../scripts/rlog_transform.R"
@@ -108,11 +110,15 @@ rule rlog_transform:
 rule deseq_report:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
-        table=join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"),
+        table=join(
+            BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"
+        ),
         fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
-        featureCounts= get_count_matrix,
+        featureCounts=get_count_matrix,
         rld=join(BASE_ANALYSIS_DIR, "deseq2/rlog_transform.RDS.gz"),
-        gsea_result=join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.gseares.RDS"),
+        gsea_result=join(
+            BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.gseares.RDS"
+        ),
     output:
         join(BASE_ANALYSIS_DIR, "reports/deseq2/{condition}/{contrast}_diffexp.html"),
     params:
@@ -133,40 +139,43 @@ rule deseq_report:
 
 rule run_gsea:
     input:
-        table=join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"),
+        table=join(
+            BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"
+        ),
         fpkm_path=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
     output:
-        gsea_result=join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.gseares.RDS"),
+        gsea_result=join(
+            BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.gseares.RDS"
+        ),
     params:
         contrast=get_contrast,
     conda:
         "../envs/R_4.yaml"
     log:
-        "logs/run_gsea/{condition}_{contrast}.log"
+        "logs/run_gsea/{condition}_{contrast}.log",
     threads: 1
     resources:
-        time_min=59*4,
-        mem_mb=8192*4,
+        time_min=59 * 4,
+        mem_mb=8192 * 4,
     script:  #
         "../scripts/run_gsea.R"
 
 
-
 rule gsea_report:
     input:
-        gsea_result=get_gsea_results
+        gsea_result=get_gsea_results,
     output:
         join(BASE_ANALYSIS_DIR, "reports/deseq2/{condition}_joint_gsea_report.html"),
     params:
         contrast_groups=config["diffexp"]["contrasts"],
-        plot_path = directory(join(BASE_ANALYSIS_DIR, "reports/deseq2/{condition}_plots"))
+        plot_path=directory(join(BASE_ANALYSIS_DIR, "reports/deseq2/{condition}_plots")),
     conda:
         "../envs/R_4.yaml"
     log:
-        "logs/gsea_report/{condition}.log"
+        "logs/gsea_report/{condition}.log",
     threads: 1
     resources:
-        time_min=59* 10,
+        time_min=59 * 10,
         mem_mb=8192 * 2,
     script:
         "../scripts/RMD_scripts/gsea_report.Rmd"
@@ -183,7 +192,9 @@ rule cohort_wide_comparison:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
         rld=join(BASE_ANALYSIS_DIR, "deseq2/rlog_transform.RDS.gz"),
     output:
-        join(BASE_ANALYSIS_DIR, "reports/deseq2/{condition}_cohort_wide_comparison.html"),
+        join(
+            BASE_ANALYSIS_DIR, "reports/deseq2/{condition}_cohort_wide_comparison.html"
+        ),
     params:
         contrast=config["diffexp"]["contrasts"],
     conda:
@@ -206,12 +217,15 @@ rule run_mitch:
         #),
         fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
     output:
-        mitch_table=
-            join(BASE_ANALYSIS_DIR, "results/diffexp/mitch/{condition}_mitch_table.tsv"),
-        mitch_rds=
-            join(BASE_ANALYSIS_DIR, "results/diffexp/mitch/{condition}_mitch_data.rds"),
-        mitch_report=
-            join(BASE_ANALYSIS_DIR, "results/diffexp/mitch/{condition}_mitch_report.html")
+        mitch_table=join(
+            BASE_ANALYSIS_DIR, "results/diffexp/mitch/{condition}_mitch_table.tsv"
+        ),
+        mitch_rds=join(
+            BASE_ANALYSIS_DIR, "results/diffexp/mitch/{condition}_mitch_data.rds"
+        ),
+        mitch_report=join(
+            BASE_ANALYSIS_DIR, "results/diffexp/mitch/{condition}_mitch_report.html"
+        ),
     params:
         contrasts=config["diffexp"]["contrasts"].keys(),
     conda:
@@ -220,8 +234,8 @@ rule run_mitch:
         "logs/mitch/{condition}_mitch_run.log",
     threads: 4
     resources:
-        mem_mb = 10240,
-        time_min = 59 *5
+        mem_mb=10240,
+        time_min=59 * 5,
     script:
         "../scripts/run_mitch.R"
 
@@ -244,7 +258,7 @@ rule export_diffexp_xlsx:
     conda:
         "../envs/R_4.yaml"
     resources:
-        mem_mb = 8192
+        mem_mb=8192,
     log:
         "logs/deseq2/{condition}_export_diffexp__xlsx.log",
     threads: 1
@@ -280,7 +294,7 @@ rule run_dorothea:
     log:
         "logs/run_dorothea/run_dorothea.log",
     resources:
-        mem_mb = 8192
+        mem_mb=8192,
     threads: 1
     script:
         "../scripts/dorothea.Rmd"
@@ -289,10 +303,14 @@ rule run_dorothea:
 rule run_dorothea_diffexp:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/rlog_transform.RDS.gz"),
-        table=join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"),
+        table=join(
+            BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"
+        ),
         fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
     output:
-        progeny_res=join(BASE_ANALYSIS_DIR, "dorothea/{condition}/{contrast}_dorothea.html"),
+        progeny_res=join(
+            BASE_ANALYSIS_DIR, "dorothea/{condition}/{contrast}_dorothea.html"
+        ),
     params:
         s_groups=samples.condition.unique(),
         plot_path=join(BASE_ANALYSIS_DIR, "dorothea/svg_{condition}/{contrast}"),
@@ -302,8 +320,8 @@ rule run_dorothea_diffexp:
         "logs/run_doroteh_diffexp/{condition}/{contrast}_doroteha.log",
     threads: 1
     resources:
-        mem_mb = 8192,
-        time_min = 59
+        mem_mb=8192,
+        time_min=59,
     script:
         "../scripts/RMD_scripts/dorothea_diffexp.Rmd"
 
@@ -311,10 +329,14 @@ rule run_dorothea_diffexp:
 rule run_progeny:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
-        table=join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"),
+        table=join(
+            BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"
+        ),
         fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
     output:
-        progeny_res=join(BASE_ANALYSIS_DIR, "progeny/{condition}/{contrast}_progeny.html"),
+        progeny_res=join(
+            BASE_ANALYSIS_DIR, "progeny/{condition}/{contrast}_progeny.html"
+        ),
     params:
         plot_path=join(BASE_ANALYSIS_DIR, "progeny/svg_{condition}/{contrast}"),
     conda:
@@ -323,7 +345,7 @@ rule run_progeny:
         "logs/run_progeny/{condition}/{contrast}_progeny.log",
     threads: 1
     resources:
-        mem_mb = 8192,
-        time_min = 59
+        mem_mb=8192,
+        time_min=59,
     script:
         "../scripts/RMD_scripts/progeny_analysis.Rmd"

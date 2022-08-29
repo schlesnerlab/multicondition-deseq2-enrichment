@@ -17,7 +17,7 @@ jobs:
       uses: github/super-linter@v4
       env:
         VALIDATE_ALL_CODEBASE: false
-        DEFAULT_BRANCH: master
+        DEFAULT_BRANCH: main
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         VALIDATE_SNAKEMAKE_SNAKEFMT: true
   linting:
@@ -28,7 +28,7 @@ jobs:
       uses: snakemake/snakemake-github-action@v1.22.0
       with:
         directory: .test
-        snakefile: Snakefile
+        snakefile: workflow/Snakefile
         args: "--lint"
 
   run-workflow:
@@ -47,7 +47,7 @@ jobs:
       uses: snakemake/snakemake-github-action@v1.24.0
       with:
         directory: .test
-        snakefile: Snakefile
+        snakefile: workflow/Snakefile
         args: "--use-conda --show-failed-logs --cores 2 --conda-cleanup-pkgs cache"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -56,6 +56,6 @@ jobs:
       uses: snakemake/snakemake-github-action@v1.24.0
       with:
         directory: .test
-        snakefile: Snakefile
+        snakefile: workflow/Snakefile
         args: "--report report.zip"
     

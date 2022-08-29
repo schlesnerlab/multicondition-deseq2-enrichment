@@ -8,7 +8,10 @@ min_version("6.15.1")
 
 ##### load config and sample sheets #####
 
+
 configfile: "configs/workflow_unit_test.yaml"
+
+
 validate(config, schema="schemas/config.schema.yaml")
 
 samples = pd.read_table(config["samples"]).set_index("sample", drop=False)
@@ -21,7 +24,10 @@ SEQ_TYPE = "paired"
 
 ##### target rules #####
 
+
 include: "rules/common.smk"
+
+
 salmon_files = []
 
 if config["run_mitch"]:
@@ -37,10 +43,13 @@ if config["run_carnival"]["vanilla"]:
         )
     )
 
-    for cond in CONTRASTS: 
+    for cond in CONTRASTS:
         salmon_files.extend(
             expand(
-                join(BASE_ANALYSIS_DIR, "results/{type}/reports/{condition}/{contrast}_results.html"),
+                join(
+                    BASE_ANALYSIS_DIR,
+                    "results/{type}/reports/{condition}/{contrast}_results.html",
+                ),
                 contrast=CONTRASTS[cond],
                 condition=cond,
                 type=["carnival"],
@@ -57,7 +66,10 @@ if config["run_carnival"]["inverse"]:
     for cond in CONTRASTS:
         salmon_files.extend(
             expand(
-                join(BASE_ANALYSIS_DIR, "results/{type}/reports/{condition}/{contrast}_results.html"),
+                join(
+                    BASE_ANALYSIS_DIR,
+                    "results/{type}/reports/{condition}/{contrast}_results.html",
+                ),
                 contrast=CONTRASTS[cond],
                 condition=cond,
                 type=["inversecarnival"],
@@ -69,10 +81,12 @@ if config["run_carnival"]["sample"]:
     )
 
 
-diffexp_files= get_diffxp_files()
+diffexp_files = get_diffxp_files()
+
+
 rule all:
     input:
-    	diffexp_files,
+        diffexp_files,
         salmon_files,
 
 
@@ -81,12 +95,15 @@ rule all:
 # with --use-conda --use-singularity
 container: "docker://continuumio/miniconda3"
 
+
 ##### setup report #####
+
 
 report: "report/workflow.rst"
 
 
 ##### load rules #####
+
 
 include: "rules/diffexp.smk"
 include: "rules/Carnival.smk"
