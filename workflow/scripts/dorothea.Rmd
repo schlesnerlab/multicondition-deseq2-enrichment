@@ -1,0 +1,256 @@
+---
+title: "Dorothea"
+author: "Christian Heyer"
+date: "1/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, warning = FALSE, message = FALSE, dev = "png",
+  fig.width = 12, fig.height = 12
+)
+if (!require(dorothea)) {
+  BiocManager::install("dorothea")
+}
+#library(dorothea)
+# library(bcellViper)
+library(dplyr)
+library(viper)
+library(decoupleR)
+library(RColorBrewer)
+if (!require(RNAscripts)) {
+  devtools::install("./scripts/RNAscripts", upgrade = "never")
+}
+library(RNAscripts)
+library(ggplot2)
+library(readr)
+library(ComplexHeatmap)
+library(DESeq2)
+library(purrr)
+library(magrittr)
+if (exists("snakemake")) {
+  ## Input Files
+  dds_path <- snakemake@input[["dds_path"]]
+  fpkm_path <- snakemake@input[["fpkm_path"]]
+  ### Output
+  dorothea_fp <- snakemake@input[["dorothea_fp"]]
+  # Params
+  cond_id <- names(snakemake@config[["diffexp"]][["contrasts"]])
+  samp_map <- snakemake@params[["samp_map"]]
+  plot_path <- snakemake@params[["plot_path"]]
+  comp_groups <- snakemake@config[["signif_comp"]]
+  color_scheme <- snakemake@config[["group_colors"]]
+} else {
+  BASE_ANALYSIS_DIR <- "../data/test_workflow"
+  cond_id <- "condition"
+  dds_path <- file.path(BASE_ANALYSIS_DIR, "deseq2/all.rds")
+  fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
+  samp_map <- "../data/test_data/coldata.tsv"
+  plot_path <- "./"
+  the_yaml <- yaml::read_yaml("../configs/workflow_unit_test.yaml")
+  comp_groups <- the_yaml$comp_groups
+  color_scheme <- the_yaml$group_colors
+}
+if (!dir.exists(plot_path)) {
+  dir.create(plot_path)
+}
+```
+
+## Dorothea Enrichment
+
+Dorothea is a tool/database containing mouse regulons to infer TF activitiy from gene expression data. Here we use the VIPER method to enrich TF from our RNA-seq data per sample
+
+After loading the data we replace ensembl IDs with gene symbols. We calcuate the TF sites based on the vst transformed expression values from DESeq2. 
+
+
+```{r read data}
+
+dds_file <- readRDS(dds_path)
+
+# Normalized_counts <- getVarianceStabilizedData(dds_obj)
+Normalized_counts <- assay(dds_file, blind = F)
+fpkm <- read_tsv(fpkm_path)
+filer <- fpkm %>%
+  dplyr::filter(gene %in% rownames(Normalized_counts)) %>%
+  dplyr::filter(!duplicated(gname))
+
+# joined_df <- join_tables(diffexp_tb,filer) %>% dplyr::filter(!duplicated(gname))
+Normalized_counts <- Normalized_counts[filer$gene, ]
+
+rownames(Normalized_counts) <- filer$gname
+
+# %>% dplyr::select(gname, stat) %>% dplyr::filter(!is.na(stat)) %>%
+# column_to_rownames(var = "gname") %>% as.matrix() -> diffexp_matrix
+expression_matrix <- Normalized_counts
+
+#regulons <- dorothea_mm %>% filter(confidence %in% c("A", "B", "C"))
+sample_overview <- readr::read_tsv(samp_map)
+condition_groups <- unique(sample_overview$condition)
+```
+
+## Resulting plots
+
+The first Heatmap shows the Normalized enrichment score for each sample for all transcription factors.
+THe condition is given as a colored annotation at the top of the plot. 
+
+```{r pressure, echo=FALSE}
+net <- get_dorothea(organism = "mouse", levels = c("A", "B", "C"))
+
+viper_net <- net
+colnames(viper_net) <-colnames(dorothea_mm)
+tf_activities <- dorothea::run_viper(expression_matrix, viper_net,
+  options = list(
+    method = "scale", minsize = 4,
+    eset.filter = FALSE, cores = 1,
+    verbose = FALSE
+  )
+)
+
+plot_doro_hm <- function(dds, cond, color_vec, p_data) {
+  anno_vec <- dds_file@colData %>% as.data.frame()%>%pull(!!cond)
+
+  col_palette <- RColorBrewer::brewer.pal(length(unique(anno_vec)),
+  name = "Set1"
+  )
+
+  ha <- HeatmapAnnotation(
+  group = anno_vec,
+  col = list(
+    group =
+      as_vector(color_vec)
+  )
+  )
+
+  ch <- Heatmap(p_data,
+  top_annotation = ha,
+  clustering_distance_columns = "euclidean",
+  clustering_method_columns = "average",
+  show_row_names = FALSE,
+  show_column_names = F,
+  row_names_gp = gpar(fontsize = 8),
+  column_names_rot = 70
+  )
+  save_cheatmap_svg(ch, file.path(plot_path, glue::glue("progeny_heatmap_{cond}.svg")))
+
+  ch
+}
+
+purrr::map2(cond_id, color_scheme, plot_doro_hm, dds=dds_file, p_data = tf_activities)
+```
+
+The following plots show the mean density distribution of the NES for each sample group, followed by a barplot showing the top enrichment for TF activity in each sample group.
+The y axis shows the TF factor, the x axis the NES. 
+
+```{r, fig.height = 10}
+plot_doro_plots <-  function(tf_activities, dds_file, cond) {
+  mean_tf_activities <- mean_tibble_from_mat(tf_activities,
+                                             contrast_groups = colData(dds_file)[, cond],
+                                             s_map = sample_overview)
+  mean_tf_activities["TF"] <- rownames(tf_activities)
+  plot_list <- list()
+  for (c_group in unique(sample_overview %>% pull(!!cond))) {
+    plot_table <- mean_tf_activities %>%
+      dplyr::select(TF, c_group) %>%
+      dplyr::arrange(!!sym(c_group))
+    histo <- ggplot(plot_table, aes(!!sym(c_group))) +
+      geom_density() +
+      ggtitle(c_group) +
+      theme_bw() +
+      xlab("NES")
+    
+    plot_table <-
+      top_n(x = plot_table,
+            n = 25,
+            wt = abs(!!sym(c_group)))
+    plot_table <-
+      plot_table %>% mutate(color = ifelse(!!sym(c_group) > 0, "green", "red"))
+    
+    enrich_plot <-
+      ggplot(plot_table, aes(x = TF, y = !!sym(c_group))) +
+      scale_x_discrete(limits = plot_table$TF) +
+      geom_point(size = 3, aes(col = color)) +
+      geom_segment(aes(
+        x = TF,
+        xend = TF,
+        y = 0,
+        yend = !!sym(c_group)
+      )) +
+      coord_flip() +
+      theme_bw() +
+      ylab("Normalized Enrichment Score (NES)") +
+      xlab("TF") +
+      ggtitle(c_group)
+    
+    NES_plot <-
+      ggplot(plot_table, aes(x = reorder(TF,!!sym(c_group)), y = !!sym(c_group))) +
+      geom_bar(aes(fill = !!sym(c_group)), stat = "identity") +
+      scale_fill_gradient2(
+        low = "darkblue",
+        high = "indianred",
+        mid = "whitesmoke",
+        midpoint = 0
+      ) +
+      theme_minimal() +
+      theme(
+        axis.title = element_text(face = "bold", size = 12),
+        axis.text.x =
+          element_text(
+            angle = 45,
+            hjust = 1,
+            size = 10,
+            face = "bold"
+          ),
+        axis.text.y = element_text(size = 10, face = "bold"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position = "none"
+      ) +
+      ylab("NES") +
+      xlab("Pathways") +
+      ggtitle(c_group)
+    plot(histo)
+    plot(enrich_plot)
+    plot(NES_plot)
+  }
+}
+
+purrr::map(cond_id,plot_doro_plots, 
+           tf_activities = tf_activities,
+           dds_file = dds_file)
+```
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+## Using decoupleR
+
+```{r}
+sample_acts <- run_wmean(
+  mat = expression_matrix, network = net, .source = "source", .target = "target",
+  .mor = "mor", times = 100, minsize = 5
+)
+
+sample_acts_mat <- sample_acts %>%
+  dplyr::filter(statistic == "norm_wmean") %>%
+  tidyr::pivot_wider(
+    id_cols = "condition", names_from = "source",
+    values_from = "score"
+  ) %>%
+  tibble::column_to_rownames("condition") %>%
+  as.matrix() %>% 
+  t() 
+
+
+
+purrr::map2(cond_id, color_scheme, plot_doro_hm, 
+            dds = dds_file, 
+            p_data = t(scale(t(sample_acts_mat), scale = F)))
+```
+
+
+```{r, fig.height = 10}
+purrr::map(cond_id, plot_doro_plots, 
+           tf_activities = t(scale(t(sample_acts_mat))), 
+           dds_file = dds_file)
+
+
+```

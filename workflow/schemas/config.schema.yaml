@@ -1,0 +1,41 @@
+$schema: "http://json-schema.org/draft-06/schema#"
+
+description: snakemake configuration file
+
+type: object
+
+properties:
+  samples:
+    type: string
+  organism:
+    type: string
+  
+  pca:
+    type: object
+    properties:
+      labels:
+        type: array
+        items:
+          type: string
+    required:
+      - labels
+
+  diffexp:
+    type: object
+    properties:
+      contrasts:
+        type: object
+    required:
+      - contrasts
+  dirs:
+    type: object
+    properties:
+      BASE_DATA_DIR:
+        type: string
+      BASE_ANALYIS_DIR:
+        type: string
+  required:
+  - samples
+  - pca
+  - diffexp
+  - organism

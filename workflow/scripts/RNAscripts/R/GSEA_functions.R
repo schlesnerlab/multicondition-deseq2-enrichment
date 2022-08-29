@@ -1,0 +1,300 @@
+
+#' Get entrezgenenames from ensembl
+#'
+#' @param gene_names vecotr of gene symbols to be converted
+#' @param input_type String denoting the type of input given based on \link[org.Mm.eg.db]{org.Mm.eg.db}
+#' @return table of gene names to entrezgene ids
+#' @export
+#' @examples
+#' get_entrezgenes_from_ensembl(c("Aplnr"))
+get_entrezgenes_from_ensembl <- function(gene_names, input_type = "SYMBOL") {
+  if (input_type == "ENSEMBL") {
+    gene_names <- stringr::str_extract(string = gene_names, "^ENS[A-Z0-9]*")
+  }
+
+  ensembl_to_eg <- clusterProfiler::bitr(gene_names,
+    fromType = input_type, toType = "ENTREZID",
+    OrgDb = "org.Mm.eg.db"
+  )
+  return(ensembl_to_eg)
+}
+
+#' transform table of genes and log fold changes to a vector of LFCs with genes as names
+#'
+#' @param gene_tb data.frame like object with first col gene names and second col LFC values
+#' @param input_type String denoting the type of input given based on \link[org.Mm.eg.db]{org.Mm.eg.db}
+#' @return a named vector of column 2 with names from column 1
+#'
+#' @importFrom magrittr %>%
+#' @export
+get_entrezgene_vector <- function(gene_tb, input_type = "SYMBOL") {
+  gene_tb <- as.data.frame(gene_tb)
+  if (input_type == "ENSEMBL") {
+    gene_tb[, 1] <- stringr::str_extract(string = gene_tb[, 1], "^ENS[A-Z0-9]*")
+  }
+  eg <- get_entrezgenes_from_ensembl(gene_tb[, 1], input_type)
+  rownames(gene_tb) <- gene_tb[, 1]
+  gene_tb <- gene_tb[eg[, 1], ]
+  # gene_tb <- gene_tb %>%  dplyr::filter(gene_tb[,1] %in% eg[,c(input_type)])
+
+  gene_ranks <- stats::setNames(gene_tb[, 2], nm = eg$ENTREZID) %>% sort(decreasing = T)
+  gene_ranks
+}
+
+#' Take two columns from a data frame and move these to a list
+#'
+#' Useful for dealing with duplicated intries to build a translation table
+#' @param tb Tibble containing the two columns to transform
+#' @param ref_col Reference column to be used a name
+#' @param val_col Value Columns containing values
+#' @export
+table_to_list <- function(tb, ref_col, val_col) {
+  list_name <- dplyr::pull(tibble::as_tibble(tb), ref_col)
+  output_list <- list()
+  for (l_name in unique(list_name)) {
+    id_names <- tb %>%
+      dplyr::filter(get(ref_col) == l_name) %>%
+      dplyr::pull(get(val_col))
+    output_list[[l_name]] <- id_names
+  }
+
+  output_list
+}
+
+#' transform gene set using translation table
+#'
+#' Translation table bulilt by \link{table_to_list}
+#' @param gene_set two_column gene_set data_frame to transform
+#' @param gene2id Translation table from \link{table_to_list}
+#' @export
+transform_glist <- function(gene_set, gene2id) {
+  # gene_tb[,1] <- stringr::str_extract(string = gene_tb[,1], "^ENS[A-Z0-9]*")
+
+  index <- gene_set %>% dplyr::pull(2)
+  self_hatred <- gene2id[as.character(index)]
+  length_info <- sapply(self_hatred, length)
+  tibble::tibble(
+    gs_name = rep(gene_set$gs_name, length_info),
+    ens_id = na.omit(unlist(self_hatred))
+  )
+}
+
+#' Run over representation
+#'
+#' @inheritParams gsea_test
+#' @param universe Universe of all tested genes from the experiment
+#' @param input_type Gene input type used f.e. ENSEMBL or gene symbol
+#' @param ... passed to enricher function \link[clusterProfiler]{enricher}
+#'
+#' @return enrichResult object from \link[DOSE]{DOSE-package}
+over_rep_test <- function(DE_genes, T2G, universe, input_type = "ENSEMBL", ...) {
+  DE_genes <- as.data.frame(DE_genes)
+  if (input_type == "ENSEMBL") {
+    DE_genes[, 1] <- stringr::str_extract(string = DE_genes %>% dplyr::pull(1), "^ENS[A-Z0-9]*")
+  }
+  enrichment_result <- clusterProfiler::enricher(
+    gene = DE_genes[, 1],
+    pvalueCutoff = 0.05,
+    universe = universe,
+    TERM2GENE = T2G,
+    ...
+  )
+  return(enrichment_result)
+}
+
+#' Run gene set enrichment analysis using \link[fgsea]{fgsea}
+#'
+#' @param DE_genes Tibble of diferentially expressed genes and their log fold
+#' changes
+#' @param T2G Term to Gene table of gene set enrichment.
+#' @param input_type  Gene ID type used in database
+#' @param ... Arguments passed to \link[clusterProfiler]{GSEA}
+#' @return enrichment result from \link[fgsea]{fgsea}
+#' @importFrom magrittr %>%
+gsea_test <- function(DE_genes, T2G, input_type = "gene_symbol", ...) {
+  DE_genes <- as.data.frame(DE_genes)
+  if (input_type == "ENSEMBL") {
+    DE_genes[, 1] <- stringr::str_extract(string = DE_genes %>% dplyr::pull(1), "^ENS[A-Z0-9]*")
+  }
+  glist <- stats::setNames(DE_genes[, 2], nm = DE_genes[, 1]) %>% sort(decreasing = T)
+  enrichment_result <- clusterProfiler::GSEA(
+    geneList = glist,
+    TERM2GENE = as.data.frame(T2G),
+    ...
+  )
+  enrichment_result
+}
+
+
+#' Run the msig using clusterprofiler on a gene set list.
+#'
+#' @param gset_list A data.frame/tibble with enriched genes and their log fold changes
+#' @param category Msigdb categories to include. Defaults to NULL (all categories)
+#' @param subcategory Msigdb subcategory
+#' @param species Latin name of species where data comes from. Defaults to Mus musculus.
+#' @param GSEA logical argument if GSEA is being used or over representation test
+#' @param universe universe of all tested genes to be given when GSEA is FALSE
+#' @param translation_table named list translating gene IDs from \link{table_to_list}
+#' @param msdb_var Variable to use for gsea from msgdbr table \link[msigdbr]{msigdbr}
+#' @param input_type Type of input in gset_list
+#' @param ... Parameters passed to enichment functions from clusterProfiler
+#'
+#' @return \link[DOSE]{enrichResult-class} of given information
+#' @export
+run_msig_enricher <- function(gset_list, category = NULL, species = "Mus musculus",
+                              subcategory = NULL,
+                              GSEA = TRUE, universe = NULL, translation_table = NULL,
+                              msdb_var = "gene_symbol", input_type = "gene_symbol",
+                              ...) {
+  stopifnot(class(gset_list) == "list")
+  col_names <- c("gs_name", msdb_var)
+  msg_class <- msigdbr::msigdbr(
+    species = species,
+    category = category,
+    subcategory = subcategory
+  ) %>%
+    dplyr::select(col_names)
+  if (!is.null(translation_table)) {
+    msg_class <- transform_glist(msg_class, translation_table)
+  }
+  if (GSEA) {
+    enrich_res <- purrr::map(gset_list, gsea_test,
+      T2G = msg_class,
+      input_type = input_type,
+      ...
+    )
+  } else {
+    if (input_type == "ENSEMBL") {
+      universe <- stringr::str_extract(string = universe, "^ENS[A-Z0-9]*")
+    }
+    enrich_res <- purrr::map(gset_list, over_rep_test,
+      T2G = msg_class, universe = universe,
+      input_type = input_type,
+      ...
+    )
+  }
+  return(enrich_res)
+}
+#' Run KEGG gene set enrichment on DE_tb table of genes
+#'
+#' @param DE_tb Data.frame like object of col 1 gene symbols, col2 LFC values
+#' @param input_type String denoting the type of input given based on \link[org.Mm.eg.db]{org.Mm.eg.db}
+#' @param p_valcut Cutoff passed to gseKEGG
+#' @return \link[clusterProfiler]{gseKEGG}
+#' @importFrom magrittr %>%
+#' @export
+run_gsea <- function(DE_tb, input_type, p_valcut = 0.05) {
+  DE_tb <- as.data.frame(DE_tb)
+  if (input_type == "ENSEMBL") {
+    DE_tb[, 1] <- stringr::str_extract(string = DE_tb[, 1], "^ENS[A-Z0-9]*")
+  }
+  eg <- get_entrezgenes_from_ensembl(DE_tb[, 1], input_type = input_type)
+  rownames(DE_tb) <- DE_tb[, 1]
+  DE_tb <- DE_tb[eg[, 1], ]
+  # DE_tb <- DE_tb %>% dplyr::filter(DE_tb[,1] %in% eg[,1])
+
+  gene_ranks <- stats::setNames(DE_tb[, 2], nm = eg$ENTREZID) %>% sort(decreasing = T)
+
+  fgsea_results <- clusterProfiler::gseKEGG(gene_ranks, organism = "mmu", pvalueCutoff = p_valcut, eps = 0)
+
+  return(fgsea_results)
+}
+#' Function to create Reactome DB for gene centric analysis
+#'
+#' @export
+#' @importFrom org.Mm.eg.db org.Mm.eg.db
+#' @param output_type Type of gene ID to be used as output. Needs to be compatible
+#' with org.Mm.eg.db keys
+buildReactome <- function(output_type = "ENSEMBL") {
+  # Get Human gene annotations
+  mm <- org.Mm.eg.db::org.Mm.eg.db
+
+  # Get Reactome IDs and names
+  reac <- as.list(reactome.db::reactomePATHID2EXTID)
+  reac.names <- as.list(reactome.db::reactomePATHID2NAME)
+  # FIlter for Human Pathways
+  index <- grep("R-MMU", names(reac.names), value = T)
+
+  mouse.reac <- reac[index]
+
+  # Get reactome names
+  names(mouse.reac) <- unlist(reac.names[index])
+
+
+  # query unique reactome indices
+  query <- unique(unlist(mouse.reac))
+  # Create data.frame of ENTREZID to GENE SYMBOLS from
+  entrez.to.gene <- AnnotationDbi::select(
+    mm,
+    keys = query,
+    columns = c("ENTREZID", output_type),
+    keytype = "ENTREZID"
+  )
+
+  # Build Reactome Database by iterating across homo.reac and switch entrez-gene
+  # Ids to HGNC gene symbols
+  reactomeDB <- sapply(mouse.reac, function(x) {
+    index <- which(as.character(entrez.to.gene[, 1]) %in%
+      x)
+
+    return(entrez.to.gene[index, 2])
+  }, USE.NAMES = T)
+
+  return(reactomeDB)
+}
+
+#' Plot Enrichment Barplot
+#'
+#' @param GSEA_table Table containing results from GSEA analysis
+#' @param X Column with Pathways names of GSEA
+#' @param Y Column with NES/ES from GSEA
+#' @param pval Column containing pvalue
+#' @param pval_threshold pvalue filter threshold
+#' @param n_max Max number of pathways to plot
+#'
+#' @return
+#' @export
+#' @importFrom stats na.omit
+#'
+#' @examples
+#' NULL
+plot_enrichment <- function(GSEA_table, X, Y, pval = "pval", pval_threshold = 0.1,
+                            n_max = 20) {
+  GSEA_tb <- tibble::as_tibble(GSEA_table) %>%
+    dplyr::arrange(dplyr::desc(!!as.name(Y))) %>%
+    dplyr::filter(abs(!!as.name(pval)) < pval_threshold) %>%
+    dplyr::mutate(pathway := factor(!!as.name(X), levels = rev(!!as.name(X))))
+  if (nrow(GSEA_tb) > n_max) {
+    pos_GSEA_tb <- utils::head(GSEA_tb, n = n_max %/% 2) %>% dplyr::filter(!!as.name(Y) > 0)
+    neg_GSEA_tb <- utils::tail(GSEA_tb, n = n_max %/% 2) %>% dplyr::filter(!!as.name(Y) < 0)
+    GSEA_tb <- rbind(pos_GSEA_tb, neg_GSEA_tb)
+  }
+  ggplot2::ggplot(GSEA_tb, ggplot2::aes(x = pathway, y = !!rlang::sym(Y))) +
+    ggplot2::geom_point(
+      size = 3,
+      ggplot2::aes(color = ifelse(!!rlang::sym(Y) > 0, "red", "blue"))
+    ) +
+    ggplot2::geom_segment(ggplot2::aes(x = pathway, xend = pathway, y = 0, yend = !!rlang::sym(Y))) +
+    ggplot2::coord_flip() +
+    ggplot2::theme_bw() +
+    ggplot2::theme(legend.position = "none")
+}
+
+#' Return the correct org_db 
+#'
+#' @param org_name Name of organism used in analysis
+#'
+#' @return
+#' @export
+#'
+#' @examples NULL
+get_org_db <- function(org_name) {
+  if (org_name == "Mus musculus") {
+    org_db <- org.Mm.eg.db::org.Mm.eg.db
+  } else if (org_name == "Homo sapiens") {
+    org_db <- org.Hs.eg.db::org.Hs.eg.db
+  } else {
+    stop("Species not supported. Pleasue choose Mus musculus or Homosapiens")
+  }
+  org_db
+}

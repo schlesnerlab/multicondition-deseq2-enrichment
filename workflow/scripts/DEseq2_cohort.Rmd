@@ -1,0 +1,375 @@
+---
+title: "DEseq2_cohort"
+author: "Christian Heyer"
+date: "2/24/2020"
+output: html_document
+fig_width: 12
+fig_height: 9
+---
+<style type="text/css">
+.main-container {
+  max-width: 1800px;
+  margin-left: auto;
+  margin-right: auto;
+}y
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, warning = FALSE, message = FALSE,
+  dev = "png",
+  fig.width = 12, fig.height = 12
+)
+
+require(dplyr)
+library(magrittr)
+library(ComplexHeatmap)
+library(pheatmap)
+
+library(PCAtools)
+
+library(clusterProfiler)
+
+library(RNAscripts)
+
+
+if (exists("snakemake")) {
+  diffexp_tables_paths <- snakemake@input[["tables"]]
+  contrast_list <- snakemake@params[["contrast"]]
+  cond_id <- snakemake@wildcards[["condition"]]
+  fpkm_path <- snakemake@input[["fpkm"]]
+  dds_path <- snakemake@input[["dds_obj"]]
+  rld_path <- snakemake@input[["rld"]]
+  write(paste0(
+    class(diffexp_tables_paths), " and ",
+    class(contrast_list)
+  ), file = stderr())
+  threads <- snakemake@threads
+  lfc_threshold <- snakemake@config[["diffexp"]][["LFC_threshold"]]
+  pvalue_threshold <- snakemake@config[["diffexp"]][["pval_threshold"]]
+  group_colors <- snakemake@config[["group_colors"]][[cond_id]] %>% unlist()
+  run_pert <- snakemake@config[["perform_perturbation"]]
+} else {
+  BASE_ANALYSIS_DIR <- "../data/test_workflow"
+  conf <- yaml::read_yaml("../configs/workflow_unit_test.yaml")
+  cond_id <- "condition"
+  diffexp_tables_paths <- as.list(file.path(
+    BASE_ANALYSIS_DIR,
+    glue::glue("results/diffexp/condition/{names(conf$diffexp$contrasts$condition)}.diffexp.tsv")
+  ))
+  contrast_list <- names(conf$diffexp$contrasts$condition)
+
+  fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
+  dds_path <- file.path(BASE_ANALYSIS_DIR, "deseq2/all.rds")
+  rld_path <- file.path(BASE_ANALYSIS_DIR, "deseq2/rlog_transform.RDS.gz")
+  threads <- 2
+  lfc_threshold <- 0.5
+  pvalue_threshold <- 0.05
+  run_pert <- FALSE
+
+  group_colors <- conf[["group_colors"]][[cond_id]] %>% unlist()
+}
+```
+
+
+
+```{r Read data}
+## READ all DIFFexp tables
+diff_exp_tables <- purrr::map(diffexp_tables_paths, 
+                              readr::read_tsv, 
+                              col_names = c(
+  "gene_id",
+  "baseMean",
+  "logFoldChange",
+  "lfcSE", 
+  "stat",
+  "pvalue", 
+  "padj"
+), skip = 1)
+names(diff_exp_tables) <- contrast_list
+all_ensembl <- diff_exp_tables[[1]][, 1]
+### Set Rownames for data frame
+diff_exp_frames <- purrr::map(diff_exp_tables, function(x) {
+  gene_ids <- x$gene_id
+  diff_exp_fr <- as.data.frame(x[, -1])
+  rownames(diff_exp_fr) <- gene_ids
+  diff_exp_fr
+})
+### Read FPKM Table
+fpkm <- readr::read_tsv(fpkm_path)
+all_genes <- fpkm %>%
+  dplyr::filter(gene %in% all_ensembl$gene_id) %>%
+  dplyr::select(gname)
+
+Big_tables <- purrr::map(diff_exp_tables, join_tables, fpkm = fpkm)
+
+```
+This document investigates all differentially expressed genes from across contrast groups.
+The goal here is to analyze if genes are recurring in across contrast groups, which groups
+they are recurring in and attempt to functionally characterize them. 
+
+## Compare differentially expressed gene groups gene groups
+
+The Upsetplot below shows the amount of genes unique to each contrast and the overlaps between all the various groups. 
+
+The data table below it marks the diffexp status of all the genes found here for manual query, incase you want to know for a specific
+gene if it is deemed as differentially expressed across multiple groups. 
+
+```{r Upset, echo=FALSE}
+
+group_name_combinations <- c()
+
+gene_names <- purrr::map(Big_tables, function(x) {
+  x %>% dplyr::pull(gname)
+})
+
+sig_gene_map <- purrr::map(Big_tables, function(x) {
+  x %>%
+    dplyr::filter(padj < pvalue_threshold &
+                  abs(logFoldChange) > lfc_threshold) %>%
+    dplyr::select(gene, gname)
+})
+
+sig_gene_names <- purrr::map(sig_gene_map, function(x) {
+  dplyr::pull(x, gname)
+})
+if (any(purrr::map(sig_gene_map,nrow) > 0)) {
+  gene_name_set <- ComplexHeatmap::list_to_matrix(sig_gene_names)
+  comb_mat <- ComplexHeatmap::make_comb_mat(gene_name_set)
+  comb_mat_order <- ComplexHeatmap::comb_size(comb_mat) %>% sort(decreasing = T)
+  combination_gene_sets <- build_comb_gene_set(comb_mat = comb_mat, comb_mat_order = comb_mat_order)
+  H_res <- run_msig_enricher(combination_gene_sets, "H", GSEA = F)
+H_res <- H_res[!(purrr::map_lgl(H_res, is.null))]
+
+}
+if (length(sig_gene_names) > 1) {
+  test<- UpSetR::upset(UpSetR::fromList(sig_gene_names), 
+                       nsets = length(sig_gene_names), 
+                       nintersects = 30, 
+                       order.by = c("degree", "freq"), 
+                       decreasing = c(T, T)) 
+} else {
+  test <- NULL
+}
+#if (!run_pert) {
+#  small_comb <- comb_mat[comb_size(comb_mat) >= 20]
+#  UpSet(small_comb, comb_order = order(comb_size(small_comb), 
+#                                       decreasing = T), )
+#}
+
+#test
+```
+
+```{r, echo = FALSE}
+build_comb_gene_set <- function(comb_mat, comb_mat_order) {
+  combination_gene_sets <- list()
+  for (c_name in ComplexHeatmap::comb_name(comb_mat)) {
+    gnames <- ComplexHeatmap::extract_comb(m = comb_mat, comb_name = c_name)
+
+    groups_index <- stringr::str_split(c_name, "") %>% unlist()
+    group_names <- ComplexHeatmap::set_name(comb_mat)[as.logical(as.numeric(groups_index))]
+    merged_group_name <- paste(group_names, collapse = " + ")
+
+
+
+    combination_gene_sets[[merged_group_name]] <- tibble::tibble(gene_names = gnames, 
+                                                                 lfc = rep(0, length(gnames)))
+  }
+  if (length(combination_gene_sets) > 30) {
+    combination_gene_sets <- combination_gene_sets[c(match(names(comb_mat_order), ComplexHeatmap::comb_name(comb_mat))[1:30])]
+  } else {
+    combination_gene_sets <- combination_gene_sets
+  }
+  combination_gene_sets
+}
+
+
+
+
+
+
+
+#' Create dynamic table from significant gene names
+#'
+#' @param sig_gene_names import list of genes to put in matrix
+#'
+#' @return DT::datatable
+#' @export
+#'
+#' @examples
+create_overlap_matrix <- function(sig_gene_names) {
+  gene_name_index <- unlist(sig_gene_names) %>%
+    unique() %>%
+    sort()
+
+  #' Takes two character vecotrs (info and index) and checks which index fields are present in info
+  #'
+  #' @return returns a vecor of length(index) with 1 or 0 depending on True or False
+  check_against_index <- function(info, index) {
+    return(as.numeric(index %in% info))
+  }
+
+  gene_matrix <- sapply(sig_gene_names, check_against_index, index = gene_name_index)
+  rownames(gene_matrix) <- gene_name_index
+
+
+  gene_matrix <- cbind(gene_matrix, total = rowSums(gene_matrix))
+
+  ordered_matrix <- gene_matrix[order(gene_matrix[, "total"], decreasing = T), ]
+
+  DT::datatable(ordered_matrix)
+}
+
+ifelse(all(purrr::map(sig_gene_names,
+                      is.null)),create_overlap_matrix(sig_gene_names), print("No enrichments present"))
+```
+
+## Gene set enrichment {.tabset}
+
+Since we cannot score genes between samples, we use over representation tests for the different categories shown the the upset plot above.
+For each group we attempt to run the over representation test and present the results across all comparisons classes shown in the upset plot above.
+
+Each tab group shows the contrast analyed, in case no plot is shown, then no enrichments against msigdb could be found. 
+
+
+```{r}
+
+plot_gene_sets <- function(gset_res, plot_title) {
+  print(plot_title)
+  if (!is.null(gset_res)) {
+    if (any(gset_res@result$p.adjust < 0.05)) {
+      cnet_plot <- enrichplot::cnetplot(gset_res) + ggplot2::ggtitle(plot_title)
+      return(cnet_plot)
+    }
+  } else {
+    return(NULL)
+  }
+}
+if (exists("H_res")) {
+  cnet_plots <- purrr::pmap(list(H_res, names(H_res)), plot_gene_sets)
+}
+```
+
+```{r plot Enrichments, results="asis", eval = exists("H_res")}
+
+H_barplots <- purrr::map(H_res, barplot)
+H_heatmaps <- purrr::map(H_res, clusterProfiler::heatplot, showCategory = 10)
+
+
+for (set_n in names(H_res)) {
+  if (any(H_res[[set_n]]@result$p.adjust < 0.05)) {
+    cat("### ", set_n, "H set \n")
+    y <- H_barplots[[set_n]]
+    ifelse(nrow(y$data) > 0, plot(y), "")
+    ifelse(nrow(H_res[[set_n]]) > 0, 
+           plot(dotplot(H_res[[set_n]], orderBy = "x")), 
+           "")
+    cat("\n")
+    cat("\n")
+    ifelse(nrow(cnet_plots[[set_n]]$data) > 0, plot(cnet_plots[[set_n]]), "")
+    cat("\n \n")
+  }
+}
+```
+
+## Overview of the Data cohort QC etc. 
+
+The following section gives a general overview of the data cohort.
+
+### Heatmap of all Diffexp genes
+
+The following heatmap shows the expression levels of all differntially expressed genes.
+The gene expression is shown as normalized deseq2 rlog expression values. 
+
+```{r, fig.width = 12, fig.heigh = 12}
+
+dds_obj <- readRDS(dds_path)
+
+rld <- readRDS(rld_path)
+
+sig_transcripts <- purrr::map(sig_gene_map, function(x) {
+  dplyr::pull(x, gene)
+}) %>%
+  unlist() %>%
+  unique()
+
+# select <- order(var(counts(dds_obj,normalized=TRUE)),
+#                decreasing=TRUE)[1:400]
+df <- data.frame(SummarizedExperiment::colData(dds_obj)[, c("condition")])
+rownames(df) <- colnames(SummarizedExperiment::assay(rld))
+colnames(df) <- "condition"
+
+annotation_cols <- list("condition" = group_colors)
+
+ha <- ComplexHeatmap::HeatmapAnnotation(condition = rld@colData$condition, col = annotation_cols)
+normalized_expression <- SummarizedExperiment::assay(rld[sig_transcripts, ]) - rowMeans(SummarizedExperiment::assay(rld[sig_transcripts, ]))
+ComplexHeatmap::Heatmap(normalized_expression,
+  cluster_rows = TRUE, show_row_names = FALSE,
+  # col = viridis::viridis(100),
+  top_annotation = ha,
+  name = "Normalized gene expression in differentially expressed genes",
+#  km = 4
+)
+```
+
+### Distance Plot
+
+Euclidean sample distance from rlog2 transformed expression values. The distance matrix
+over all genes is calculated and plotted as a heatmap. Further rows and columns are clustered based
+on the euclidean distance. A clear split between the young and aged samples can be seen in the data. 
+However, the gene expression between the young and young-treated samples seems to be higher than between
+the aged mouse ECs.
+
+```{r}
+library("RColorBrewer")
+# vsd <- DESeq2::vst(dds_obj)
+sampleDists <- dist(t(SummarizedExperiment::assay(rld)), )
+sampleDistMatrix <- as.matrix(sampleDists)
+# rownames(sampleDistMatrix) <- paste(vsd$condition)
+colnames(sampleDistMatrix) <- NULL
+colors <- colorRampPalette(rev(brewer.pal(9, "Blues")))(255)
+pheatmap(sampleDistMatrix,
+  clustering_distance_rows = sampleDists,
+  clustering_distance_cols = sampleDists,
+  col = colors
+)
+```
+
+
+### PCA
+
+A PCA is made to better characterize the data. The first scree plot shows the amount of variation that is explained in each principal
+component. The barplots show the variation explained per pc, the red line shows the cumlative variance explained. 
+
+```{r fig.height = 8, fig.idth = 8}
+
+assay_data <- SummarizedExperiment::assay(rld)
+metadata <- SummarizedExperiment::colData(rld)
+
+pca_data <- PCAtools::pca(assay_data, metadata = metadata, removeVar = 0.1)
+scree <- screeplot(pca_data)
+scree
+```
+
+The first PCA plot of PC1 and PC2 shown here shows that the primary source of variance 
+in the data stems from the young vs aged samples. PC2 seems to split young-EC from young-ec treated with apelin, but fails to 
+do so in the aged samples, hinting that the affect of apelin may differ between these cells. 
+
+The second group of plots give an overview of the first 5 PCs, but no clear splits can be identified in the smaller PCs. 
+
+```{r echo = FALSE, fig.height = 8, fig_width = 8}
+PCAtools::biplot(pca_data, colby = "condition", legendPosition = "right")
+plot <- PCAtools::pairsplot(pca_data,
+  components = PCAtools::getComponents(pca_data, c(1:5)),
+  triangle = F,
+  hline = 0, vline = 0,
+  pointSize = 0.8,
+  gridlines.major = FALSE, gridlines.minor = FALSE,
+  colby = "condition",
+  title = "Pairs plot", plotaxes = T,
+  margingaps = ggplot2::unit(c(-0.01, -0.01, -0.01, -0.01), "cm"),
+  legendPosition = "none"
+)
+plot
+```
+

@@ -1,0 +1,482 @@
+---
+title: "Carnival_join"
+author: "Christian Heyer"
+date: "19 1 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+options(error = traceback, echo = False)
+library(readr)
+library(piano)
+library(dplyr)
+library(ggplot2)
+library(tibble)
+library(tidyr)
+library(dplyr)
+library(scales)
+library(plyr)
+library(GSEABase)
+library(network)
+library(reshape2)
+library(cowplot)
+library(pheatmap)
+library(ggraph)
+library(tidygraph)
+library(ComplexHeatmap)
+library(RNAscripts)
+library(UpSetR)
+
+```
+
+# Join CARNIVAL nework comparison
+
+Here we compare the documents across all Standard Carinval or Inverse Carinval networks
+across all comparison groups defined in the original yaml. 
+
+
+```{r Snakemake setup, echo = F}
+if (exists("snakemake")) {
+  carnival_paths <- snakemake@input[["carnival_objs"]] %>% as.character()
+  names(carnival_paths) <- names(snakemake@config[["diffexp"]][["contrasts"]])
+  contrast_names <-  names(snakemake@config[["diffexp"]][["contrasts"]])
+  write(carnival_paths, file = stderr())
+  write(names(carnival_paths), file = stderr())
+  tt_basepath <- snakemake@params[["tutorial_source_path"]]
+   # Output Files
+  outpath <- snakemake@output[[1]]
+  organism <- snakemake@config[["organsim"]]
+} else {
+  BASE_ANALYSIS_DIR = ''
+  the_yaml <- file.path("../../configs/worflow_test.yaml")
+  yaml_me <- yaml::read_yaml(the_yaml)
+  carnival_paths <- ""
+  names(carnival_paths) <- names(yaml_me$comp_groups)
+  contrast_names <-  names(yaml_me$comp_groups)
+  base_path <- ""
+  tt_basepath <- ""
+}
+source(file.path(tt_basepath, "support_enrichment.r"))
+source(file.path(tt_basepath, "support_networks.r"))
+
+## Get Omnipath
+organism_number <- RNAscripts::get_organism_omnipath_id(organism)
+omniR <- OmnipathR::import_omnipath_interactions(organism = organism_number)
+
+# signed and directed
+omnipath_sd <- omniR %>% dplyr::filter(consensus_direction == 1 &
+                                (consensus_stimulation == 1 | 
+                                 consensus_inhibition == 1
+                                 ))
+  
+# changing 0/1 criteria in consensus_stimulation/inhibition to -1/1
+omnipath_sd$consensus_stimulation[which( omnipath_sd$consensus_stimulation == 0)] = -1
+omnipath_sd$consensus_inhibition[which( omnipath_sd$consensus_inhibition == 1)] = -1
+omnipath_sd$consensus_inhibition[which( omnipath_sd$consensus_inhibition == 0)] = 1
+
+# check consistency on consensus sign and select only those in a SIF format
+sif <- omnipath_sd[,c('source_genesymbol', 'consensus_stimulation', 'consensus_inhibition', 'target_genesymbol')] %>%
+      dplyr::filter(consensus_stimulation==consensus_inhibition) %>%
+      unique.data.frame()
+
+sif$consensus_stimulation <- NULL
+colnames(sif) <- c('source', 'interaction', 'target')
+
+# remove complexes
+sif$source <- gsub(":", "_", sif$source)
+sif$target <- gsub(":", "_", sif$target)
+
+# dorothea for CARNIVAL
+carnival_sample_resolution <- purrr::map(carnival_paths, read_rds)
+for (i in seq_along(length(carnival_sample_resolution))) {
+  if(length(carnival_sample_resolution[[i]]) == 0){
+    carnival_sample_resolution[[i]] <- NULL
+  }
+}
+
+if (length(carnival_sample_resolution) == 0) {
+  write("Carnvival unsuccessful", file = stderr())
+  readr::write_tsv(data.frame(), file = outpath )
+  quit(save = "no", status = 0, runLast = FALSE)
+}
+  
+
+msig_h <- msigdbr::msigdbr("Mus musculus", "C2",)
+
+
+pathways <- loadGSC(file = dplyr::select(msig_h, c("gene_symbol", "gs_name")),
+                   addInfo =dplyr::select(msig_h, c("gs_name", "gs_description")) 
+                   )
+nodes_carnival <- extractCARNIVALnodes(carnival_sample_resolution[[1]])
+
+```
+
+Note the following samples did not converge in carnival and have no results:
+`r names(carnival_sample_resolution)[purrr::map(carnival_sample_resolution, length) == 0]`
+
+
+## Networks overview
+
+THe following plot shows the amount of nodes and edges in each network built using Carnival.
+- Xaxis = nodes
+- Yaxis = edges
+
+```{r pressure, echo=FALSE}
+carnival_sample_resolution <- purrr::map(carnival_sample_resolution, 
+    process_carnival)
+carnival_sample_resolution <- carnival_sample_resolution[purrr::map(carnival_sample_resolution, length) > 0]
+
+# get only summary files from CARNIVAL results
+sifts <- lapply(carnival_sample_resolution, function(x){x$weightedSIF})
+nodos <- lapply(carnival_sample_resolution, function(x){x$nodesAttributes})
+write(names(sifts), file = stderr())
+# Calculate the number of edges and nodes in the networks and its density
+node_edge = do.call(rbind,lapply(sifts, count_edges_nodes_degree))
+
+# Calculate degree distribution for a sample
+count_degree = sifts[[1]] %>% degree_count
+
+#degree distribution
+p = data.frame(table(count_degree$total_count) / nrow(count_degree))
+colnames(p) = c("Var1", "total_degree")
+p = merge.data.frame(p, data.frame(table(count_degree$in_count) / nrow(count_degree)), all = T)
+colnames(p) = c("Var1", "total_degree", "in_degree")
+p = merge.data.frame(p, data.frame(table(count_degree$out_count) / nrow(count_degree)), all = T)
+colnames(p) = c("k", "total_degree", "in_degree", "out_degree")
+p = melt(p, value.name = "p", id.vars = "k")
+p$k = relevel(p$k, "0")
+
+#visualise
+ggdat = as.data.frame(node_edge) %>% tibble::rownames_to_column(var = "sample") %>%
+  dplyr::mutate(condition = gsub(".Rep[0-9]{1}", "", sample))
+
+#Plotting
+
+# relation between number of edges and nodes
+ggplot(ggdat, aes(x = nodes, y = edges, color = as.factor(condition))) +
+  geom_point() +
+  geom_text(label = ggdat$sample, 
+            check_overlap = TRUE,
+            vjust = 0, 
+            nudge_y = 0.5,
+            show.legend = F) +
+  theme_bw(base_size = 15) +
+  guides(color = guide_legend( title="Conditions" ) ) +
+  ggtitle("Node-edge composition")
+```
+For the degree distribution refer to https://mathinsight.org/degree_distribution
+https://www.ibm.com/docs/en/spss-modeler/18.0.0?topic=networks-network-density
+In short: the degree of a node is the sum of input and output connections of each node
+THe network density ranges from 0 to 1 and describes how interconnected the nodes are.
+
+```{r}
+#network degree
+ggplot(ggdat, aes(x = density, y = sample, fill = as.factor(condition) )) +
+  geom_col() +
+  theme_bw(base_size = 15) +
+  guides(fill = guide_legend( title="Conditions" ) ) +
+  ggtitle("Network degree")
+```
+
+The following degree distribution illustrates the number of connections each node hast. 
+k =1 <- Nodes with one connection etc. 
+
+```{r, fig.width=12, fig.height=8}
+# degree distribution
+levels(p$k) <- levels(p$k) %>% as.numeric() %>% sort() 
+dd <- ggplot(data = p, aes(x = k, y = p, group = variable, color = variable)) +
+  geom_point() +
+  geom_line() +
+  theme_bw() +
+  theme(legend.position="none") +
+  guides(color = guide_legend( title = "degree type" ) ) +
+  ggtitle("Degree distribution")
+
+ddp <- ggplot(data = p, aes(x = as.numeric(k), y = p, group = variable, color = variable)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = as.numeric(p$k), 
+                     trans = scales::log_trans()) +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) +
+  annotation_logticks() +
+  theme_bw() +
+  guides(color = guide_legend( title = "degree type" ) ) +
+  ggtitle("Degree distribution (log scale)") +
+  xlab("k (ln)") + ylab("p (log10)")
+
+plot_grid(dd, ddp, labels = "auto", rel_widths = c(1, 2))
+
+```
+## Network similarities
+
+Here we jointly analyze the simliarities between networks.
+
+In the first image we calulate the jaccard distance of edges between comparison groups
+and plot these in the heatmap. 
+- 0 = completely different
+- 1 = identical 
+
+```{r, eval = ifelse(length(sifts) >1, TRUE, FALSE)}
+# create a matrix of all interactions for all samples
+write(dim(sif), file = stderr())
+interactions = getTopology(networks = sifts, scafoldNET = sif)
+colnames(interactions) <- names(carnival_sample_resolution)
+# FIxes bug in topology function (To lazy to actually fix)
+ncol_interact <- ncol(interactions)
+#interactions <- interactions[,-c(1:ncol_interact/2)]
+# get the edges per sample
+net_int = apply(interactions, 2, function(x, r){
+  r[which(!is.na(x))]
+}, rownames(interactions))
+
+# calculate Jaccard indexes per pair
+combined = expand.grid(1:length(names(sifts)), 1:length(names(sifts)))
+jac_index = matrix(data = NA, nrow = length(names(sifts)), ncol = length(names(sifts)),
+                   dimnames = list(names(sifts), names(sifts)))
+
+for (i in 1:nrow(combined)){
+  n = names(sifts)[combined[i,1]]
+  m = names(sifts)[combined[i,2]]
+  jac_index[n,m] = length( intersect(net_int[[n]], net_int[[m]]) ) / length( union(net_int[[n]], net_int[[m]]) )
+}
+
+# Visualize the indexes in a heatmap
+
+pheatmap::pheatmap(jac_index,fontsize=14, 
+           fontsize_row = 10, fontsize_col = 10, 
+           angle_col = 45, treeheight_col = 0)
+corrplot::corrplot(jac_index,)
+```
+
+Now we find core interactions by looking for interactions that are found across multiple comparisons.
+We analyze Core interactions found in:
+- All comparison groups
+- In "YEC-vs-YECplusA","AEC-vs-AECplusA"
+- In YEC vs AEC and YecplusA vs YECplusA
+
+(Further groups can be added to this analyses). 
+
+```{r,fig.width=16, fig.height=16,  eval = ifelse(length(sifts) >1, TRUE, FALSE)}
+# Get common interactions in a group
+
+get_common_interactions <-  function(interaction_list, samples, psmpl_per = 95, carnival_list = NULL) {
+ 
+  stopifnot(all(samples %in% colnames(interaction_list)))
+  interaction_list <- interaction_list[,samples]
+  if (!is.null(carnival_list)) {
+    nodos<- purrr::map_df(carnival_list[samples], function(carn_res) {
+    carn_res$nodesAttributes %>%pull(AvgAct)
+    })
+    nodos$nodes <- carnival_list[[1]]$nodesAttributes$Node
+    
+  }
+
+  
+  shared_interactions_WT = getCoreInteractions(topology = interaction_list, psmpl = psmpl_per)
+
+# Visualise the interactions
+  colnames(shared_interactions_WT) = c("from", "sign", "to")
+  labels_edge = c("-1" = "inhibition", "1" = "activation")
+  nodes = data.frame(union(shared_interactions_WT$from, shared_interactions_WT$to))
+  colnames(nodes) = "nodes"
+  nodes$label = nodes$nodes
+  if (!is.null(carnival_list)) {
+    nodes <- dplyr::inner_join(nodes, nodos) %>% mutate(sd = matrixStats::rowSds(as.matrix(.[samples])))
+  } else {
+    nodes$sd <- rep(1, nrow(nodes)  )
+  }
+
+  
+  tidygraph::tbl_graph(nodes = nodes, edges = shared_interactions_WT) %>%
+    ggraph::ggraph(layout = "auto") + 
+    geom_node_point(aes(color =sd), size = 8) +
+    geom_edge_link(arrow = arrow(), aes(edge_colour=as.factor(sign))) +
+    theme_graph() + scale_color_viridis(option = "E") +
+   geom_node_text(aes(label = label), nudge_y = 0.04)
+}
+
+get_common_interactions(interactions[],names(interactions), 100, carnival_list = carnival_sample_resolution) + ggtitle("Between all groups")
+
+#get_common_interactions(interactions[,c(6,7)], 100) + ggtitle("Apelin Treatment common interactions")
+```
+
+## Comparing both Treatment groups
+TODO requires work to get running for any group
+```{r, eval = T, fig.width=12, fig.height=12, eval = ifelse(length(sifts) >1, TRUE, FALSE)}
+# Get common interactions in a group
+create_overlap_matrix <- function(sig_gene_names) {
+  
+  gene_name_index <- unlist(sig_gene_names) %>% unique() %>% sort()
+  
+  #' Takes two character vecotrs (info and index) and checks which index fields are present in info
+  #'
+  #'@return returns a vecor of length(index) with 1 or 0 depending on True or False
+  check_against_index <- function(info, index) {
+    return(as.numeric(index %in% info))
+  }
+  
+  gene_matrix <- sapply(sig_gene_names, check_against_index, index = gene_name_index)
+  rownames(gene_matrix) <- gene_name_index  
+  
+  row_sum <- rowSums(gene_matrix)
+  
+  gene_matrix <- cbind(gene_matrix, total=rowSums(gene_matrix))
+  
+  ordered_matrix <- gene_matrix[order(gene_matrix[,'total'], decreasing = T),]
+  
+  DT::datatable(ordered_matrix)
+
+}
+build_comb_gene_set <- function(comb_mat, comb_mat_order) {
+  combination_gene_sets <- list()
+  for (c_name in ComplexHeatmap::comb_name(comb_mat)) {
+    #c_name <- comb_name(comb_mat)[1]
+    gnames <- ComplexHeatmap::extract_comb(m = comb_mat, comb_name = c_name)
+    
+    groups_index <- stringr::str_split(c_name, "") %>% unlist()
+    group_names <- ComplexHeatmap::set_name(comb_mat)[as.logical(as.numeric(groups_index))]
+    merged_group_name <- paste(group_names, collapse = " + ")
+    
+    
+    #Big_tables[group_names] %>% purrr::reduce(inner_join,by = "gname") -> combined_tbl
+    #if (length(group_names == 1)) {
+    #  combined_tbl %>% dplyr::filter(gname %in% gnames) %>% dplyr::distinct(gname, .keep_all = T) -> combined_tbl
+    #}
+    #combined_tbl[-1] %>% dplyr::mutate(sum = rowSums(abs(.))) %>% dplyr::select(sum) -> summed_lfc
+    
+    combination_gene_sets[[merged_group_name]] <- tibble::tibble(gene_names = gnames, lfc = rep(0, length(gnames)))
+  }
+  if(length(combination_gene_sets) > 30) {
+    combination_gene_sets <- combination_gene_sets[c(match(names(comb_mat_order),ComplexHeatmap::comb_name(comb_mat))[1:30])]
+  } else {  
+    combination_gene_sets <- combination_gene_sets
+  }
+  combination_gene_sets
+}
+
+gsa_plot <- function(gene_list, background, pathways) {
+  
+  sig_pathways <- runGSAhyper(genes =  gene_list,
+      universe = background, gsc = pathways)
+  sig_pathways_df <- as.data.frame(sig_pathways$resTab)  %>% 
+    tibble::rownames_to_column(var = "pathway") 
+  
+  
+  
+  PathwaysSelect <- sig_pathways_df %>%
+      dplyr::select(pathway, `p-value`, `Adjusted p-value`) %>%
+      dplyr::filter(`Adjusted p-value` <= 0.05) %>%
+      dplyr::rename(pvalue = `p-value`, AdjPvalu = `Adjusted p-value`) %>% 
+      dplyr::mutate(pathway = as.factor(pathway))
+  
+  PathwaysSelect <- data.frame(t(apply(PathwaysSelect, 1, function(r){
+    aux = unlist(strsplit( sub("_",";", r["pathway"]), ";" ))
+    r["pathway"] = gsub("_", " ", aux[2])
+    return(c(r, "source" = aux[1]))
+  })))
+  
+  if (ncol(PathwaysSelect) == 4) {
+    colnames(PathwaysSelect) = c("pathway", "pvalue", "AdjPvalu", "source")
+    PathwaysSelect$AdjPvalu = as.numeric(PathwaysSelect$AdjPvalu)
+  
+    ggdata = PathwaysSelect %>% 
+      dplyr::slice_min(AdjPvalu, n = 25) %>%
+      dplyr::filter(AdjPvalu <= 0.05) %>% 
+      dplyr::group_by(source) %>% 
+      dplyr::arrange(AdjPvalu) %>%
+      dplyr::slice(1:5) 
+  
+    
+  # Visualize top results
+    ggplot(ggdata, aes(y = reorder(pathway, -log10(AdjPvalu)), x = -log10(AdjPvalu)), color = source) + 
+        facet_grid(source ~ ., scales="free", space = "free") +
+          geom_bar(stat = "identity") +
+          annotation_logticks(sides = "bt") +
+          theme_bw() +
+          theme(axis.title = element_text(face = "bold", size = 12),
+                axis.text.y = element_text(size = 6)) +
+          ylab("")
+    
+  }
+}
+build_gene_sets <- function(node_list) {
+  gene_name_set <- ComplexHeatmap::list_to_matrix(node_list)
+  comb_mat <- ComplexHeatmap::make_comb_mat(gene_name_set)
+  comb_mat_order <- ComplexHeatmap::comb_size(comb_mat) %>% sort(decreasing = T)
+  
+  create_overlap_matrix(node_list)
+  combination_gene_sets_youndold <- build_comb_gene_set(comb_mat, comb_mat_order = comb_mat_order)
+  combination_gene_sets_youndold
+}
+if (all(c(contrast_names) %in% names(interactions))) {
+  get_common_interactions(interactions[], 
+                        samples = contrast_names,
+                        psmpl_per = 95,
+                        carnival_list = carnival_sample_resolution) 
+
+
+  nodes <- purrr::map(contrast_names, function(x) {
+    carnival_sample_resolution[[x]]$nodesAttributes %>% 
+                      dplyr::filter(AvgAct != 0)
+  })
+
+  node_list <- nodes
+  names(node_list) <- contrast_names
+  upset_act <-UpSetR::fromList(node_list)
+
+
+  UpSetR::upset(upset_act)
+
+  gene_name_set <- ComplexHeatmap::list_to_matrix(node_list)
+  comb_mat <- ComplexHeatmap::make_comb_mat(gene_name_set)
+  comb_mat_order <- ComplexHeatmap::comb_size(comb_mat) %>% sort(decreasing = T)
+
+#create_overlap_matrix(node_list)
+  combination_gene_sets <- build_comb_gene_set(comb_mat, comb_mat_order = comb_mat_order)
+
+  nodes_carnival = extractCARNIVALnodes(carnival_sample_resolution$`YECplusA-vs-YEC`)
+
+
+#  genelist <- combination_gene_sets$`young + old`$gene_names
+
+
+  
+#  gsa_plot(combination_gene_sets$`young + old`$gene_names, background = nodes_carnival$bg, pathways = pathways) + ggtitle("young + old") 
+  
+#  gsa_plot(combination_gene_sets$young$gene_names, background = nodes_carnival$bg, pathways = pathways) + ggtitle("young") 
+#  gsa_plot(combination_gene_sets$old$gene_names, background = nodes_carnival$bg, pathways = pathways) + ggtitle("old") 
+
+  create_overlap_matrix(node_list)
+  
+}
+```
+
+
+
+## Contrast node activities
+
+Carnival infers node activities which we intend to compare across samples to better understand
+the directionality of these pathways
+
+```{r, fig.height = 16, fig.width=8}
+
+sample_nodes  <- purrr::map(carnival_sample_resolution, function(x) {
+  x$nodesAttributes
+})
+
+build_matrix_from_nodes <- function(node_list, node_type = "AvgAct") {
+  gene_index <- purrr::map(node_list,  ~ pull(., Node)) %>% unlist() %>% unique()
+  node_mat <- purrr::map(node_list, ~ dplyr::select(., Node, !!node_type)) %>% purrr::reduce(full_join, by = "Node")
+  colnames(node_mat) <- c("Node", names(node_list))
+  node_mat
+}
+
+avg_mat <- build_matrix_from_nodes(sample_nodes) %>% as.data.frame()
+rownames(avg_mat) <- avg_mat$Node
+avg_mat<- subset(avg_mat, select = -c(Node)) %>% as.matrix()
+non_zero_index <- apply(avg_mat, 1, function(x) !all(x==0))
+
+ComplexHeatmap::Heatmap(avg_mat[non_zero_index,], column_names_rot = 45, row_names_gp = gpar(fontsize = 6))
+```
+

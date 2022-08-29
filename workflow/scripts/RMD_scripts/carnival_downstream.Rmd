@@ -1,0 +1,169 @@
+---
+title: "Carnival_analysis"
+author: "Christian Heyer"
+date: "13 1 2022"
+output: html_document
+---
+
+```{r, echo = F, include=F}
+contrast_groups <- ifelse(exists("snakemake"), 
+  snakemake@wildcards[["contrast"]], 
+  "")
+```
+
+# Carnival results from deseq2 for `r contrast_groups`
+
+Here we analyze the results from CARNIVAL analysis from each comparison group-
+
+```{r setup, include=FALSE}
+library(CARNIVAL)
+library(readr)
+library(piano)
+library(dplyr)
+library(ggplot2)
+library(tibble)
+library(tidyr)
+library(dplyr)
+library(scales)
+library(plyr)
+library(GSEABase)
+library(network)
+library(reshape2)
+library(cowplot)
+library(pheatmap)
+library(ggraph)
+library(tidygraph)
+library(snowfall)
+```
+
+
+## Carnival Network
+
+CARNIVAL analyses was run following generally https://github.com/saezlab/transcriptutorial 
+
+Here we load up a network for each Comparison group and analyze it herein.
+
+```{r snakemakeparams}
+if (exists("snakemake")) {
+  carnival_path <- snakemake@input[["carnival_obj"]]
+  tt_basepath <- snakemake@params[["tutorial_source_path"]]
+  comp_group <- snakemake@wildcards[["contrast"]]
+  out_file <- snakemake@output[[1]]
+  organism <- snakemake@config[["organism"]]
+} else {
+  comp_group <- ""
+  carnival_path <- glue::glue("")
+  base_path <- ""
+  tt_basepath <- ""
+  out_file <- ""
+}
+source(file.path(tt_basepath, "support_enrichment.r"))
+source(file.path(tt_basepath, "support_networks.r"))
+
+process_carnival <- function(carnival_res) {
+  carnival_res$weightedSIF <- carnival_res$weightedSIF %>% dplyr::filter(Weight != 0)
+  carnival_res
+}
+msig_h <- msigdbr::msigdbr(organism, "C2", )
+pathways<- loadGSC(file = dplyr::select(msig_h,
+                      c("gene_symbol", "gs_name")),
+                   addInfo = dplyr::select(msig_h,
+                      c("gs_name", "gs_description")))
+```
+
+
+### GSEA
+
+The following gene set enrichment using a hyper geometric test to analyze:
+- all Connections inferred by carnival
+- Background: All nodes found in the prior knowledge network
+
+All Networks need to interpreted in terms of the differential expression analysis.
+Node activität relates to the change in expression between the comparison groups. 
+Positive values <- Group1, negative values Group2.
+
+```{r GSEA analysis}
+
+carnival_result <- readRDS(carnival_path)
+if(length(carnival_result) == 0) {
+  write("CARNIVAL FAILED", file = out_file)
+  quit(save = "no", status = 0)
+}
+
+carnival_result <- process_carnival(carnival_result)
+nodes_carnival  <- extractCARNIVALnodes(carnival_result)
+
+sig_pathways    <- runGSAhyper(genes = nodes_carnival$sucesses,
+    universe = nodes_carnival$bg, gsc = pathways)
+sig_pathways_df <- as.data.frame(sig_pathways$resTab)  %>%
+  tibble::rownames_to_column(var = "pathway")
+
+pathways_select <- sig_pathways_df %>%
+    dplyr::select(pathway, `p-value`, `Adjusted p-value`) %>%
+    dplyr::filter(`Adjusted p-value` <= 0.05) %>% # Signficance value fixed for now
+    dplyr::rename(pvalue = `p-value`, AdjPvalu = `Adjusted p-value`) %>% 
+    dplyr::mutate(pathway = as.factor(pathway))
+
+
+pathways_select <- data.frame(t(apply(pathways_select, 1, function(r) {
+  aux <- unlist(strsplit( sub("_",";", r["pathway"]), ";"))
+  r["pathway"] <- gsub("_", " ", aux[2])
+  return(c(r, "source" = aux[1]))
+})))
+
+if (ncol(pathways_select) == 4) {
+  colnames(pathways_select) = c("pathway", "pvalue", "AdjPvalu", "source")
+  pathways_select$AdjPvalu = as.numeric(pathways_select$AdjPvalu)
+
+    ggdata = pathways_select %>%
+      dplyr::slice_min(AdjPvalu, n = 25) %>%
+      dplyr::filter(AdjPvalu <= 0.05) %>%
+      dplyr::group_by(source) %>%
+      dplyr::arrange(AdjPvalu) %>%
+      dplyr::slice(1:5)
+
+# Visualize top results
+  ggplot(ggdata, aes(y = reorder(pathway, -log10(AdjPvalu)), 
+      x = -log10(AdjPvalu)), color = source) + 
+      facet_grid(source ~ ., scales="free", space = "free") +
+        geom_bar(stat = "identity") +
+        annotation_logticks(sides = "bt") +
+        theme_bw() +
+        theme(axis.title = element_text(face = "bold", size = 12),
+              axis.text.y = element_text(size = 6)) +
+        ylab("")
+}
+```
+
+##  Carnival network plot
+
+Carnival network plots give an overview of the network inferred by carnival.
+Changes reflect the comparison based on the comparison group from this document
+
+```{r pressure, fig.height=10, fig.width=16}
+
+plot_carn_network <- function(carn_res) {
+
+  ed <- carn_res$weightedSIF
+  colnames(ed) <- c("from", "sign", "to", "weight")
+  nod <- data.frame(union(ed$from, ed$to))
+
+  colnames(nod) <- "nodes"
+  nod$label <- nod$nodes
+  joined_nod <- left_join(nod, carn_res$nodesAttributes,
+                            by = c("label" = "Node"))
+  yote <- tidygraph::tbl_graph(nodes = joined_nod,
+                       edges = ed
+  ) %>%
+  ggraph(layout = "auto") +
+    geom_node_point(aes(color = AvgAct), size = 8) + scale_color_gradient2() +
+    geom_edge_link(arrow = arrow(), aes(edge_colour = as.factor(sign),
+      edge_alpha = weight)) +
+    theme_graph() +  geom_node_text(aes(label = label), vjust = 0.4, repel = T)
+  yote
+}
+
+plot_carn_network(carnival_result) + ggtitle(comp_group)
+
+```
+

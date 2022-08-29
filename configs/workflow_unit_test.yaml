@@ -1,0 +1,81 @@
+### Configfile for Vascular Aging RNA pipeline####
+###### 
+## PERSONAL INFORMATION ##
+# Author: Christian Heyer
+# Position: PhD Student
+# Date: 08.07.2020
+# Institution: DKFZ B240
+
+## PROJECT INFORMATION ##
+# Name of the project: Vascular Aging
+# Phabricator's project: #vascaging
+# Assigned task (optional):
+
+
+## SCRIPT INFORMATION ##
+# Title: Config Script for Snakemake rnaseq pipeline for APelin experiments
+# Description: Config file based off of https://github.com/snakemake-workflows/rna-seq-star-deseq2/
+#   Used for the Apelin Vascular Aging experiment.
+# Environments: conda env with snakemake installed
+# Dependencies: python3, snakemake=>5.1
+# Usage: use with `snakemake --configfile {this_file}
+
+######
+
+# path or URL to sample sheet (TSV format, columns: sample, condition, ...)
+samples: data/test_data/coldata.tsv #### Sample sheet
+counts: data/test_data/mouse_counts.tsv
+gene_name_type: ENSEMBL # ENSEMBL or HGNC Or ENTREZ_ID
+organism: "Mus musculus" # Name of Organsim sequenced (Supported: Mus Musculus, Homo sapiens)
+# path or URL to sequencing unit sheet (TSV format, columns: sample, unit, fq1, fq2, 
+# strandedness). Units are technical replicates (e.g. lanes, or resequencing of the 
+# same biological sample).If the column "strandedness" is present (which is optional), 
+# can be empty or has one of these values: none, yes or reverse. none is for unstranded 
+# protocols, yes an reverse follow the nomenclature used in `htseq-count --reverse` 
+# which is referenced in STAR manual section 7, "Counting number of reads per gene".
+
+#units: ./data/APLN_KO/units_cre.tsv ## Alignment information
+#run: 'run220607_A01419_0182_BH7LWYDRX2'### Run information  this needs to be added to unit
+
+### Data Dirs ###
+dirs:
+  BASE_DATA_DIR: 'data/test_data'
+  BASE_ANALYSIS_DIR: 'data/test_workflow'
+
+
+
+pca:
+  labels:
+    # columns of sample sheet to use for PCA
+    - condition
+
+diffexp:
+  pval_threshold: 0.05
+  LFC_threshold: 0.5
+    # cont:rasts for the deseq2 results method
+  contrasts:
+    condition:
+      Del_8_17_homo_vs_wt:
+        - Del_8_17_homo
+        - WT
+  model: "~condition"
+      
+comp_groups:
+  condition:
+    Del_8_17_homo_vs_wt:
+      - Del_8_17_homo
+      - WT
+
+group_colors:
+  condition:
+    Del_8_17_homo: "red"
+    WT: "blue"
+
+run_mitch: False
+run_carnival:
+  vanilla: False
+  inverse: False
+  sample: False  
+  joint_rep: False
+
+cplex_solver: "/home/heyer/software/external/CPLEX_Studio201/cplex/bin/x86-64_linux/cplex"

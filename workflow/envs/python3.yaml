@@ -1,0 +1,7 @@
+name: python3
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - pandas
+  - openpyxl

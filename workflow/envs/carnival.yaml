@@ -1,0 +1,67 @@
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - bioconductor-progeny
+  - bioconductor-omnipathr
+  - bioconductor-complexheatmap
+  - r-readr
+  - r-tibble
+  - r-tidyr
+  - r-dplyr
+  - bioconductor-biomart
+  - bioconductor-deseq2
+  - bioconductor-biocparallel
+  - r-pheatmap
+  - r-ggplot2
+  - r-visnetwork
+ # - bioconductor-do.db
+  - r-devtools
+  - r-svglite
+  - r-plyr
+  - r-reshape2
+ # - bioconductor-go.db
+  - r-gridgraphics
+  - r-rcppeigen
+  - r-polyclip
+  - r-tweenr
+  - r-ggforce
+  - bioconductor-qvalue
+  - r-fastmatch
+  - r-data.table
+  - bioconductor-treeio
+  - r-tidytree
+  - r-ape
+  - r-tidygraph
+  - r-viridis
+  - r-graphlayouts
+  - bioconductor-fgsea
+  - r-patchwork
+  - r-ggplotify
+  - r-ggfun
+  - r-yulab.utils
+  - bioconductor-ggtree
+  - bioconductor-gosemsim
+  - r-shadowtext
+  - r-ggraph
+  - bioconductor-dose
+  - r-aplot
+  - r-babelgene
+  - bioconductor-enrichplot
+  - r-downloader
+#  - bioconductor-org.mm.eg.db
+#  - bioconductor-org.hs.eg.db
+  - r-msigdbr
+  - bioconductor-clusterprofiler
+  - bioconductor-piano
+  - r-scales
+  - bioconductor-GSEABase
+  - r-network
+  - r-reshape2
+  - r-cowplot
+  - r-snowfall
+  - r-rmarkdown
+  - r-corrplot
+  - r-upsetr
+    #  - r-rvcheck<0.2.0

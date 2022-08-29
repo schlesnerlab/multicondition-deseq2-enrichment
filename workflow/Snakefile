@@ -1,0 +1,92 @@
+import pandas as pd
+from snakemake.utils import validate, min_version
+from os.path import join
+
+##### set minimum snakemake version #####
+min_version("6.15.1")
+
+
+##### load config and sample sheets #####
+
+configfile: "configs/workflow_unit_test.yaml"
+validate(config, schema="schemas/config.schema.yaml")
+
+samples = pd.read_table(config["samples"]).set_index("sample", drop=False)
+validate(samples, schema="schemas/samples.schema.yaml")
+
+BASE_DATA_DIR = config["dirs"]["BASE_DATA_DIR"]
+BASE_ANALYSIS_DIR = config["dirs"]["BASE_ANALYSIS_DIR"]
+CONTRASTS = config["diffexp"]["contrasts"]
+SEQ_TYPE = "paired"
+
+##### target rules #####
+
+include: "rules/common.smk"
+salmon_files = []
+
+if config["run_mitch"]:
+    salmon_files.extend(
+        [join(BASE_ANALYSIS_DIR, "results/diffexp/mitch/mitch_report.html")]
+    )
+
+if config["run_carnival"]["vanilla"]:
+    salmon_files.extend(
+        expand(
+            join(BASE_ANALYSIS_DIR, "results/{type}/reports/join_report.html"),
+            type=["carnival"],
+        )
+    )
+
+    for cond in CONTRASTS: 
+        salmon_files.extend(
+            expand(
+                join(BASE_ANALYSIS_DIR, "results/{type}/reports/{condition}/{contrast}_results.html"),
+                contrast=CONTRASTS[cond],
+                condition=cond,
+                type=["carnival"],
+            )
+        )
+if config["run_carnival"]["inverse"]:
+    if config["run_carnival"]["joint_rep"]:
+        salmon_files.extend(
+            expand(
+                join(BASE_ANALYSIS_DIR, "results/{type}/reports/join_report.html"),
+                type=["inversecarnival"],
+            )
+        )
+    for cond in CONTRASTS:
+        salmon_files.extend(
+            expand(
+                join(BASE_ANALYSIS_DIR, "results/{type}/reports/{condition}/{contrast}_results.html"),
+                contrast=CONTRASTS[cond],
+                condition=cond,
+                type=["inversecarnival"],
+            )
+        )
+if config["run_carnival"]["sample"]:
+    salmon_files.extend(
+        [join(BASE_ANALYSIS_DIR, "reports/carnival/carnival_sample_report.html")]
+    )
+
+
+diffexp_files= get_diffxp_files()
+rule all:
+    input:
+    	diffexp_files,
+        salmon_files,
+
+
+##### setup singularity #####
+# this container defines the underlying OS for each job when using the workflow
+# with --use-conda --use-singularity
+container: "docker://continuumio/miniconda3"
+
+##### setup report #####
+
+report: "report/workflow.rst"
+
+
+##### load rules #####
+
+include: "rules/diffexp.smk"
+include: "rules/Carnival.smk"

@@ -1,0 +1,47 @@
+name: R
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bioconductor-viper
+  # - bioconductor-dorothea (NOTE: DOrothea is broken on bioconda)
+  - bioconductor-omnipathr
+  - bioconductor-chipseeker
+  - bioconductor-deseq2
+#  - bioconductor-reactomepa
+  - bioconductor-genomicranges
+  - bioconductor-pcatools
+  - bioconductor-carnival
+  - bioconductor-txdb.mmusculus.UCSC.mm10.knownGene
+#  - bioconductor-ensembldb
+  - bioconductor-progeny
+  - r-magrittr
+  - bioconductor-rtracklayer
+  - bioconductor-annotationhub
+ # - bioconductor-org.mm.eg.db
+ # - bioconductor-org.hs.eg.db
+  - r-ggplot2
+  - r-tidyverse
+  - r-reshape2
+  - r-knitr
+  - r-data.table
+  - r-dt
+  - r-devtools
+  - bioconductor-complexheatmap
+#  - bioconductor-bsgenome.mmusculus.ucsc.mm10
+#  - bioconductor-bsgenome.hsapiens.ucsc.hg38
+  - bioconductor-clusterprofiler
+  - r-rmarkdown
+  - r-knitr
+  - r-readxl
+  - r-openxlsx
+  - r-rcpp
+  - r-pheatmap
+  - r-msigdbr
+  - r-babelgene
+  - r-ggsignif
+  - r-rvcheck<0.2.0
+  - bioconductor-enhancedvolcano
+  - r-ggnewscale
+  - r-svglite
+#  - bioconductor-do.db
