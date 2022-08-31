@@ -73,8 +73,8 @@ group_colors:
 
 run_mitch: False
 run_carnival:
-  vanilla: False
-  inverse: False
+  vanilla: True
+  inverse: True
   sample: False  
   joint_rep: False
 

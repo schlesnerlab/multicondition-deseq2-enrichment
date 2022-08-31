@@ -118,6 +118,14 @@ def get_diffexp_tables(wildcards):
     )
     return output_files
 
+def get_carnival_objs(wildcards):
+    cond = wildcards.condition
+    output_files = expand(
+        join(BASE_ANALYSIS_DIR, "results/{{type}}/{{condition}}/{contrast}_carnival_res.RDS.gz"),
+        contrast=config["diffexp"]["contrasts"][cond],
+    )
+    return output_files
+
 
 ### CARNIVAL
 def get_mem_mb(wildcards, attempt):
