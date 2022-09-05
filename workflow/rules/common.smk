@@ -1,7 +1,10 @@
 ### Snakefile
-
+# Contains input functions and other functions for snakemake rules
 
 def get_diffxp_files():
+    """
+    Return all files from DE and enrichment analyses. 
+    """
     output_files = []
 
     output_files.extend([join(BASE_ANALYSIS_DIR, "results/pca.svg")])
@@ -75,20 +78,20 @@ def get_strandness(units):
 ### diffexp.smk
 def get_count_matrix(wildcards):
     """
-    Gets the path to the count matrix file. depending on the INfrastructure used.
+        Gets the path to the count matrix file. depending on the Infrastructure used.
+    TODO: Expand once we have new functions for expression data in place
     """
     if "counts" in config:
-        return config["counts"]
+        count_file = config["counts"]
     else:
-        return join(BASE_ANALYIS_DIR, "counts/all.tsv")
-
-
-def is_single_end(sample, unit):
-    return pd.isnull(units.loc[(sample, unit), "fq2"])
+        count_file =  join(BASE_ANALYIS_DIR, "counts/all.tsv")
+    return count_file
 
 
 def get_deseq2_threads(wildcards=None):
-    # https://twitter.com/mikelove/status/918770188568363008
+    """
+    https://twitter.com/mikelove/status/918770188568363008
+    """
     few_coeffs = False if wildcards is None else len(get_contrast(wildcards)) < 10
     return 1 if len(samples) < 100 or few_coeffs else 6
 
@@ -111,6 +114,9 @@ def get_gsea_results(wildcards):
 
 
 def get_diffexp_tables(wildcards):
+    """
+    Retrieves all DE results for one condition given. 
+    """
     cond = wildcards.condition
     output_files = expand(
         join(BASE_ANALYSIS_DIR, "results/diffexp/{{condition}}/{contrast}.diffexp.tsv"),
@@ -119,6 +125,9 @@ def get_diffexp_tables(wildcards):
     return output_files
 
 def get_carnival_objs(wildcards):
+    """
+    Retrieves Carnival results for one condition
+    """
     cond = wildcards.condition
     output_files = expand(
         join(BASE_ANALYSIS_DIR, "results/{{type}}/{{condition}}/{contrast}_carnival_res.RDS.gz"),
@@ -127,7 +136,6 @@ def get_carnival_objs(wildcards):
     return output_files
 
 
-### CARNIVAL
 def get_mem_mb(wildcards, attempt):
     return (attempt * 20480) + 40960
 
