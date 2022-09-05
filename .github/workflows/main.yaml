@@ -28,8 +28,8 @@ jobs:
     - name: Linting
       uses: snakemake/snakemake-github-action@v1.24.0
       with:
-        directory: .test
-        snakefile: workflow/Snakefile
+        directory: '.test'
+        snakefile: 'workflow/Snakefile'
         args: "--lint"
 
   run-workflow:
