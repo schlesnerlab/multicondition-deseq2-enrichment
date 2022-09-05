@@ -9,7 +9,7 @@ min_version("6.15.1")
 ##### load config and sample sheets #####
 
 
-configfile: "configs/workflow_unit_test.yaml"
+configfile: "config/workflow_unit_test.yaml"
 
 
 validate(config, schema="schemas/config.schema.yaml")
