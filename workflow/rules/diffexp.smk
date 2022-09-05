@@ -184,10 +184,6 @@ rule gsea_report:
 rule cohort_wide_comparison:
     input:
         tables=get_diffexp_tables,
-        #expand(
-        #    join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"),
-        #    contrast=config["diffexp"]["contrasts"],
-        #),
         fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
         rld=join(BASE_ANALYSIS_DIR, "deseq2/rlog_transform.RDS.gz"),
@@ -211,10 +207,6 @@ rule cohort_wide_comparison:
 rule run_mitch:
     input:
         tables=get_diffexp_tables,
-        #expand(
-        #    join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"),
-        #    contrast=config["diffexp"]["contrasts"],
-        #),
         fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
     output:
         mitch_table=join(
@@ -264,20 +256,6 @@ rule export_diffexp_xlsx:
     threads: 1
     script:
         "../scripts/export_diffexp_xlsx.R"
-
-
-# rule render_mitch_report:
-#    input:
-#        mitch_rds =  expand(join(BASE_ANALYSIS_DIR, "results/diffexp/mitch/{condition}_mitch_data.rds"))
-#    output:
-#    conda:
-#        '../envs/R_4.yaml'
-#    threads: 1
-#    log:
-#        "logs/mitch/render_mitch.log"
-#    script:
-#        "../scripts/mitch/{condition}_mitch_report.Rmd"
-#
 
 
 rule run_dorothea:

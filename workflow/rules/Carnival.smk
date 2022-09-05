@@ -3,14 +3,14 @@
 rule run_carnival_vanilla:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
-        table=join(BASE_ANALYSIS_DIR, "results/diffexp/{contrast}.diffexp.tsv"),
+        table=join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"),
     output:
         carnival_out=join(
-            BASE_ANALYSIS_DIR, "results/carnival/{contrast}_carnival_res.RDS.gz"
+            BASE_ANALYSIS_DIR, "results/carnival/{condition}/{contrast}_carnival_res.RDS.gz"
         ),
     params:
         s_groups=samples.condition.unique(),
-        temp_path=temp(join(BASE_ANALYSIS_DIR, "results/carnival/temp/{contrast}/")),
+        temp_path=temp(join(BASE_ANALYSIS_DIR, "results/carnival/temp/{condition}/{contrast}/")),
         run_vanilla=True,
     conda:
         "../envs/carnival.yaml"
@@ -20,7 +20,7 @@ rule run_carnival_vanilla:
         mem_mb=81920,
         time_min=(9 * 60) + 20,
     log:
-        "logs/carnival/{contrast}_carn.log",
+        "logs/carnival/{condition}/{contrast}_carn.log",
     script:
         "../scripts/test_carnival.R"
 
@@ -28,15 +28,15 @@ rule run_carnival_vanilla:
 rule run_inverse_carnival:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
-        table=join(BASE_ANALYSIS_DIR, "results/diffexp/{contrast}.diffexp.tsv"),
+        table=join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"),
     output:
         carnival_out=join(
-            BASE_ANALYSIS_DIR, "results/inversecarnival/{contrast}_carnival_res.RDS.gz"
+            BASE_ANALYSIS_DIR, "results/inversecarnival/{condition}/{contrast}_carnival_res.RDS.gz"
         ),
     params:
         s_groups=samples.condition.unique(),
         temp_path=temp(
-            join(BASE_ANALYSIS_DIR, "results/inversecarnival/temp/{contrast}/")
+            join(BASE_ANALYSIS_DIR, "results/inversecarnival/temp/{condition}/{contrast}/")
         ),
         run_vanilla=False,
     conda:
@@ -47,7 +47,7 @@ rule run_inverse_carnival:
         time_min=(25 * 60) + 40,
         nr=lambda wildcards, attempt: attempt,
     log:
-        "logs/carnival/{contrast}_carn.log",
+        "logs/carnival/{condition}/{contrast}_carn.log",
     script:
         "../scripts/test_carnival.R"
 
@@ -55,11 +55,11 @@ rule run_inverse_carnival:
 rule carnival_deseq_report:
     input:
         carnival_obj=join(
-            BASE_ANALYSIS_DIR, "results/{type}/{contrast}_carnival_res.RDS.gz"
+            BASE_ANALYSIS_DIR, "results/{type}/{condition}/{contrast}_carnival_res.RDS.gz"
         ),
     output:
         carnival_rep=join(
-            BASE_ANALYSIS_DIR, "results/{type}/reports/{contrast}_results.html"
+            BASE_ANALYSIS_DIR, "results/reports/{type}/{condition}/{contrast}_results.html"
         ),
     params:
         tutorial_source_path="scripts/transcriptutorial/",
@@ -70,19 +70,16 @@ rule carnival_deseq_report:
         mem_mb=8192,
         time_min=59,
     log:
-        "logs/carnival/{type}_{contrast}_result.log",
+        "logs/carnival/{type}_{condition}_{contrast}_result.log",
     script:
         "../scripts/RMD_scripts/carnival_downstream.Rmd"
 
 
 rule carnival_joint_report:
     input:
-        carnival_objs=expand(
-            join(BASE_ANALYSIS_DIR, "results/{{type}}/{contrast}_carnival_res.RDS.gz"),
-            contrast=config["diffexp"]["contrasts"],
-        ),
+        carnival_objs=get_carnival_objs
     output:
-        carnival_rep=join(BASE_ANALYSIS_DIR, "results/{type}/reports/join_report.html"),
+        carnival_rep=join(BASE_ANALYSIS_DIR, "results/reports/{type}/{condition}/join_report.html"),
     params:
         tutorial_source_path="scripts/transcriptutorial/",
     conda:
@@ -92,7 +89,7 @@ rule carnival_joint_report:
         mem_mb=8192,
         time_min=20,
     log:
-        "logs/carnival/{type}_report.log",
+        "logs/carnival/{condition}/{type}_report.log",
     script:
         "../scripts/RMD_scripts/carnival_join.Rmd"
 

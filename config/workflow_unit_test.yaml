@@ -3,21 +3,21 @@
 ## PERSONAL INFORMATION ##
 # Author: Christian Heyer
 # Position: PhD Student
-# Date: 08.07.2020
-# Institution: DKFZ B240
+# Date: 
+# Institution: 
 
 ## PROJECT INFORMATION ##
-# Name of the project: Vascular Aging
-# Phabricator's project: #vascaging
+# Name of the project: 
+# Phabricator's project: 
 # Assigned task (optional):
 
 
 ## SCRIPT INFORMATION ##
-# Title: Config Script for Snakemake rnaseq pipeline for APelin experiments
-# Description: Config file based off of https://github.com/snakemake-workflows/rna-seq-star-deseq2/
-#   Used for the Apelin Vascular Aging experiment.
-# Environments: conda env with snakemake installed
-# Dependencies: python3, snakemake=>5.1
+# Title: 
+# Description: 
+#   
+# Environments: 
+# Dependencies: 
 # Usage: use with `snakemake --configfile {this_file}
 
 ######

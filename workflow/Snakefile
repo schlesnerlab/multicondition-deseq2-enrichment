@@ -38,8 +38,9 @@ if config["run_mitch"]:
 if config["run_carnival"]["vanilla"]:
     salmon_files.extend(
         expand(
-            join(BASE_ANALYSIS_DIR, "results/{type}/reports/join_report.html"),
+            join(BASE_ANALYSIS_DIR, "results/reports/{type}/{condition}/join_report.html"),
             type=["carnival"],
+            condition = CONTRASTS.keys()
         )
     )
 
@@ -48,7 +49,7 @@ if config["run_carnival"]["vanilla"]:
             expand(
                 join(
                     BASE_ANALYSIS_DIR,
-                    "results/{type}/reports/{condition}/{contrast}_results.html",
+                    "results/reports/{type}/{condition}/{contrast}_results.html",
                 ),
                 contrast=CONTRASTS[cond],
                 condition=cond,
@@ -59,8 +60,9 @@ if config["run_carnival"]["inverse"]:
     if config["run_carnival"]["joint_rep"]:
         salmon_files.extend(
             expand(
-                join(BASE_ANALYSIS_DIR, "results/{type}/reports/join_report.html"),
+                join(BASE_ANALYSIS_DIR, "results/reports/{type}/{condition}/join_report.html"),
                 type=["inversecarnival"],
+                condition=cond,
             )
         )
     for cond in CONTRASTS:
@@ -68,7 +70,7 @@ if config["run_carnival"]["inverse"]:
             expand(
                 join(
                     BASE_ANALYSIS_DIR,
-                    "results/{type}/reports/{condition}/{contrast}_results.html",
+                    "results/reports/{type}/{condition}/{contrast}_results.html",
                 ),
                 contrast=CONTRASTS[cond],
                 condition=cond,
