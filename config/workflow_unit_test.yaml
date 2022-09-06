@@ -23,8 +23,8 @@
 ######
 
 # path or URL to sample sheet (TSV format, columns: sample, condition, ...)
-samples: '../data/test_data/coldata.tsv' #### Sample sheet
-counts: '../data/test_data/mouse_counts.tsv'
+samples: 'data/test_data/coldata.tsv' #### Sample sheet
+counts: 'data/test_data/mouse_counts.tsv'
 gene_name_type: ENSEMBL # ENSEMBL or HGNC Or ENTREZ_ID
 organism: "Mus musculus" # Name of Organsim sequenced (Supported: Mus Musculus, Homo sapiens)
 # path or URL to sequencing unit sheet (TSV format, columns: sample, unit, fq1, fq2, 
