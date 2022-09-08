@@ -1,5 +1,7 @@
 # Multicondition-deseq2-enrichment
 
+[![Tests](https://github.com/schlesnerlab/multicondition-deseq2-enrichment/actions/workflows/main.yaml/badge.svg)](https://github.com/schlesnerlab/multicondition-deseq2-enrichment/actions/workflows/main.yaml)
+
 Snakemake workflow for running differential expression and enrichment analyses for experimental 
 setups with multiple groups or multiple conditions. Results are provided as a set of HTML files
 with plots and result description both for each comparison defined in the config file. 

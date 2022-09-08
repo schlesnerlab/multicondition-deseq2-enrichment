@@ -16,12 +16,12 @@ dependencies:
   - r-pheatmap
   - r-ggplot2
   - r-visnetwork
- # - bioconductor-do.db
+  - bioconductor-do.db
   - r-devtools
   - r-svglite
   - r-plyr
   - r-reshape2
- # - bioconductor-go.db
+  - bioconductor-go.db
   - r-gridgraphics
   - r-rcppeigen
   - r-polyclip
@@ -50,8 +50,8 @@ dependencies:
   - r-babelgene
   - bioconductor-enrichplot
   - r-downloader
-#  - bioconductor-org.mm.eg.db
-#  - bioconductor-org.hs.eg.db
+  - bioconductor-org.mm.eg.db
+  - bioconductor-org.hs.eg.db
   - r-msigdbr
   - bioconductor-clusterprofiler
   - bioconductor-piano

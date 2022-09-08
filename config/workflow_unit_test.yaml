@@ -1,4 +1,4 @@
-### Configfile for Vascular Aging RNA pipeline####
+### Configfile 
 ###### 
 ## PERSONAL INFORMATION ##
 # Author: Christian Heyer
@@ -24,18 +24,9 @@
 
 # path or URL to sample sheet (TSV format, columns: sample, condition, ...)
 samples: 'data/test_data/coldata.tsv' #### Sample sheet
-counts: 'data/test_data/mouse_counts.tsv'
+counts: 'data/test_data/mouse_counts.tsv' # Path to count data
 gene_name_type: ENSEMBL # ENSEMBL or HGNC Or ENTREZ_ID
 organism: "Mus musculus" # Name of Organsim sequenced (Supported: Mus Musculus, Homo sapiens)
-# path or URL to sequencing unit sheet (TSV format, columns: sample, unit, fq1, fq2, 
-# strandedness). Units are technical replicates (e.g. lanes, or resequencing of the 
-# same biological sample).If the column "strandedness" is present (which is optional), 
-# can be empty or has one of these values: none, yes or reverse. none is for unstranded 
-# protocols, yes an reverse follow the nomenclature used in `htseq-count --reverse` 
-# which is referenced in STAR manual section 7, "Counting number of reads per gene".
-
-#units: ./data/APLN_KO/units_cre.tsv ## Alignment information
-#run: 'run220607_A01419_0182_BH7LWYDRX2'### Run information  this needs to be added to unit
 
 ### Data Dirs ###
 dirs:
@@ -43,34 +34,30 @@ dirs:
   BASE_ANALYSIS_DIR: 'data/test_workflow'
 
 
-
+## Configuration
 pca:
   labels:
     # columns of sample sheet to use for PCA
     - condition
 
 diffexp:
-  pval_threshold: 0.05
+  pval_threshold: 0.05 
   LFC_threshold: 0.5
-    # cont:rasts for the deseq2 results method
+    # contrasts for the deseq2 results method
   contrasts:
-    condition:
-      Del_8_17_homo_vs_wt:
+    condition: # Here column in sample sheet 
+      Del_8_17_homo_vs_wt: # comparison
         - Del_8_17_homo
         - WT
   model: "~condition"
       
-comp_groups:
-  condition:
-    Del_8_17_homo_vs_wt:
-      - Del_8_17_homo
-      - WT
-
+## Color control
 group_colors:
   condition:
     Del_8_17_homo: "red"
     WT: "blue"
 
+# Workflow control and management
 run_mitch: False
 run_carnival:
   vanilla: False
