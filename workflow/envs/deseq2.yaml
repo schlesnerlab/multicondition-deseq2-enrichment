@@ -13,19 +13,19 @@ dependencies:
   - bioconductor-clusterprofiler
   - bioconductor-complexheatmap
   - bioconductor-delayedarray
-  #- bioconductor-do.db
+  - bioconductor-do.db
   - bioconductor-enhancedvolcano
   - bioconductor-genefilter
   - bioconductor-geneplotter
-#  - bioconductor-genomeinfodb
-#  - bioconductor-genomeinfodbdata
+  - bioconductor-genomeinfodb
+  - bioconductor-genomeinfodbdata
   - bioconductor-genomicranges
   - bioconductor-goseq
   - bioconductor-iranges
- # - bioconductor-org.mm.eg.db
+  - bioconductor-org.mm.eg.db
   - bioconductor-pcatools
-#  - bioconductor-reactome.db
-#  - bioconductor-reactomepa
+  - bioconductor-reactome.db
+  - bioconductor-reactomepa
   - bioconductor-s4vectors
   - bioconductor-summarizedexperiment 
   - bioconductor-tximport 

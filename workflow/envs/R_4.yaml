@@ -8,18 +8,18 @@ dependencies:
   - bioconductor-omnipathr
   - bioconductor-chipseeker
   - bioconductor-deseq2
-#  - bioconductor-reactomepa
+  - bioconductor-reactomepa
   - bioconductor-genomicranges
   - bioconductor-pcatools
   - bioconductor-carnival
   - bioconductor-txdb.mmusculus.UCSC.mm10.knownGene
-#  - bioconductor-ensembldb
+  - bioconductor-ensembldb
   - bioconductor-progeny
   - r-magrittr
   - bioconductor-rtracklayer
   - bioconductor-annotationhub
- # - bioconductor-org.mm.eg.db
- # - bioconductor-org.hs.eg.db
+  - bioconductor-org.mm.eg.db
+  - bioconductor-org.hs.eg.db
   - r-ggplot2
   - r-tidyverse
   - r-reshape2
@@ -28,8 +28,8 @@ dependencies:
   - r-dt
   - r-devtools
   - bioconductor-complexheatmap
-#  - bioconductor-bsgenome.mmusculus.ucsc.mm10
-#  - bioconductor-bsgenome.hsapiens.ucsc.hg38
+  - bioconductor-bsgenome.mmusculus.ucsc.mm10
+  - bioconductor-bsgenome.hsapiens.ucsc.hg38
   - bioconductor-clusterprofiler
   - r-rmarkdown
   - r-knitr
@@ -44,4 +44,4 @@ dependencies:
   - bioconductor-enhancedvolcano
   - r-ggnewscale
   - r-svglite
-#  - bioconductor-do.db
+  - bioconductor-do.db
