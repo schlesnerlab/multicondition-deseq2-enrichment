@@ -23,6 +23,7 @@ dependencies:
   - bioconductor-goseq
   - bioconductor-iranges
   - bioconductor-org.mm.eg.db
+  - bioconductor-org.hs.eg.db
   - bioconductor-pcatools
   - bioconductor-reactome.db
   - bioconductor-reactomepa
