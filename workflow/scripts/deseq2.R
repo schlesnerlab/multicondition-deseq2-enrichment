@@ -3,7 +3,7 @@ sink(log)
 sink(log, type = "message")
 
 library("DESeq2")
-
+shrink_lfc <- snakemake@config[["diffexp"]][["shrink_lfc"]]
 parallel <- FALSE
 if (snakemake@threads > 1) {
   library("BiocParallel")
@@ -21,13 +21,26 @@ res <- results(dds, contrast = contrast, parallel = parallel)
 # LFC shrinkage remains deactivated since it doesn't work with support how we run
 # DESeq2
 # 
-#res <- lfcShrink(dds, contrast = contrast , res = res)
+if (shrink_lfc) {
+  resstat <- res$stat
+
+  res <- lfcShrink(dds, contrast = contrast, res = res,type = "ashr")
+# sort by p-value
+  res$stat <- resstat
+    res <- res[,c(
+    "baseMean",
+    "log2FoldChange",
+    "lfcSE", "stat",
+    "pvalue", "padj"
+  )]
+}
+res <- res[order(res$padj), ]
 
 # sort by p-value
 res <- res[order(res$padj), ]
 
 # store results
-svg(snakemake@output[["ma_plot"]])
+pdf(snakemake@output[["ma_plot"]])
 plotMA(res, ylim = c(-2, 2))
 dev.off()
 

@@ -43,6 +43,7 @@ pca:
 diffexp:
   pval_threshold: 0.05 
   LFC_threshold: 0.5
+  shrink_lfc: True
     # contrasts for the deseq2 results method
   contrasts:
     condition: # Here column in sample sheet 

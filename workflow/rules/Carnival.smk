@@ -4,6 +4,7 @@ rule run_carnival_vanilla:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
         table=join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"),
+        fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
     output:
         carnival_out=join(
             BASE_ANALYSIS_DIR, "results/carnival/{condition}/{contrast}_carnival_res.RDS.gz"
@@ -29,6 +30,7 @@ rule run_inverse_carnival:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
         table=join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"),
+        fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"), 
     output:
         carnival_out=join(
             BASE_ANALYSIS_DIR, "results/inversecarnival/{condition}/{contrast}_carnival_res.RDS.gz"
@@ -97,6 +99,7 @@ rule carnival_joint_report:
 rule run_sample_dorothea:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/rlog_transform.RDS.gz"),
+        fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
     output:
         sample_dorothea_table=join(
             BASE_ANALYSIS_DIR, "dorothea/TF_act_sample_resolution.csv"
@@ -116,6 +119,7 @@ rule run_sample_dorothea:
 rule run_sample_progeny:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/rlog_transform.RDS.gz"),
+        fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
     output:
         sample_progeny_table=join(BASE_ANALYSIS_DIR, "progeny/sample_progney.csv"),
     conda:

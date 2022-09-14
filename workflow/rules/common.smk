@@ -46,7 +46,7 @@ def get_diffxp_files():
                     ),
                     join(
                         BASE_ANALYSIS_DIR,
-                        "results/diffexp/{condition}/{contrast}.ma-plot.svg",
+                        "results/diffexp/{condition}/{contrast}.ma-plot.pdf",
                     ),
                     join(
                         BASE_ANALYSIS_DIR,
@@ -99,6 +99,8 @@ def get_deseq2_threads(wildcards=None):
 def get_contrast(wildcards):
     return config["diffexp"]["contrasts"][wildcards.condition][wildcards.contrast]
 
+def get_all_contrasts(wildcards):
+    return config["diffexp"]["contrasts"][wildcards.condition]
 
 def get_gsea_results(wildcards):
     """

@@ -73,7 +73,7 @@ rule deseq2:
         ),
         ma_plot=report(
             join(
-                BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.ma-plot.svg"
+                BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.ma-plot.pdf"
             ),
             "../report/ma.rst",
         ),

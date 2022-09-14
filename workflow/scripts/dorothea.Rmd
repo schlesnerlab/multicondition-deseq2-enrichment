@@ -68,8 +68,8 @@ After loading the data we replace ensembl IDs with gene symbols. We calcuate the
 
 dds_file <- readRDS(dds_path)
 
-# Normalized_counts <- getVarianceStabilizedData(dds_obj)
-Normalized_counts <- assay(dds_file, blind = F)
+Normalized_counts <- getVarianceStabilizedData(dds_file)
+#Normalized_counts <- assay(vst(dds_file, blind = F))
 fpkm <- read_tsv(fpkm_path)
 filer <- fpkm %>%
   dplyr::filter(gene %in% rownames(Normalized_counts)) %>%
