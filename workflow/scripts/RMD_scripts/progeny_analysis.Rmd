@@ -36,22 +36,22 @@ if (exists("snakemake")) {
   color_scheme <- snakemake@config[["group_colors"]][[cond_id]]
   organism <- snakemake@config[["organism"]]
 } else {
-  the_yaml <- yaml::read_yaml("../../configs/workflow_unit_test.yaml")
+  the_yaml <- yaml::read_yaml("../../configs/VascAge_Apelin_config.yaml")
 
-  BASE_ANALYSIS_DIR = '../../data/test_workflow'
+  BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/apelin_exp"
   cond_id <- "condition"
-  comp_id <- "Del_8_17_homo_vs_wt"
-  dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), 'deseq2/rlog_transform.RDS.gz')
+  comp_id <- "AECplusA-vs-AEC"
+  dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), 'deseq2/all.rds')
   diffexp_tb_path <- file.path(BASE_ANALYSIS_DIR, 
-                               glue::glue("results/diffexp/{cond_id}/{comp_id}.diffexp.tsv"))
+                               glue::glue("results/diffexp/{comp_id}.diffexp.tsv"))
   fpkm_path <- file.path(BASE_ANALYSIS_DIR, 'fpkm/all.tsv')
-  contrast_groups <- c("Del_8_17_homo", "wt")
+  contrast_groups <- c("AECplusA", "AEC")
   plot_path <- "."
   register(SerialParam())
-  s_groups<- c("d36-lung", "wt")
+  s_groups<- c("AECplusA", "AEC")
   contrast_name <- glue::glue("{contrast_groups[[1]]} vs {contrast_groups[[2]]}")
   comp_groups <- the_yaml$comp_groups
-  color_scheme <- the_yaml$group_colors[[cond_id]]
+  color_scheme <- the_yaml$group_colors$condition
   organism <- "Mus musculus"
   
 }
@@ -74,7 +74,7 @@ diffexp_tb <- read_tsv(diffexp_tb_path,  col_names = c('gene_id',
                                                  'pvalue', 'padj'), 
                                    skip = 1)
 #Normalized_counts <- getVarianceStabilizedData(dds_obj)
-Normalized_counts<- assay(dds_obj)
+Normalized_counts<- assay(vst(dds_obj, blind = FALSE))
 fpkm <- read_tsv(fpkm_path)
 filer <- fpkm %>% dplyr::filter(gene %in% rownames(Normalized_counts)) %>%  dplyr::filter(!duplicated(gname))
 
@@ -257,12 +257,13 @@ ComplexHeatmap::Heatmap(sample_acts_mat,
 ### Single sample mean plots using decoupler
 
 ```{r, eval = ifelse(nrow(Normalized_counts) > 1000, TRUE, FALSE)}
-as_tibble(sample_acts_mat) %>% t() -> out_yeet
+as_tibble(sample_acts_mat)  -> out_yeet
 
-yeet<- apply(out_yeet, 1, kruskal.test, g = as.factor(ann_col))
+yeet<- apply(sample_acts_mat, 1, kruskal.test, g = as.factor(ann_col))
 
 kruskal_test <- purrr::map_df(yeet, tidy,.id = "pathway") %>% mutate(padj = p.adjust(p.value, method = "BH")) %>% arrange(desc(statistic))
-plot_activity <- as_tibble(sample_acts_mat) %>% add_column(condition = fct_relevel(ann_col, s_groups))
+plot_activity <- sample_acts_mat %>% t()  %>% as.data.frame()
+plot_activity[,cond_id] <- ann_col
 
 for(pathway in kruskal_test$pathway) {
   pval <- kruskal_test %>% dplyr::filter(pathway == !!pathway) %>% pull(padj) 
@@ -300,7 +301,7 @@ ggplot(f_contrast_acts, aes(x = reorder(source, score), y = score)) +
             element_text(angle = 45, hjust = 1, size =10, face= "bold"),
         axis.text.y = element_text(size =10, face= "bold"),
         panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank()) +
+        panel.grid.minor = element_blank()) + 
     xlab("Pathways")
 ```
 

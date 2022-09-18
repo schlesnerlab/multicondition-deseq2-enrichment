@@ -33,7 +33,7 @@ jobs:
       with:
         directory: './'
         snakefile: 'workflow/Snakefile'
-        args: "--lint"
+        args: "--lint --configfile configs/workflow_test.yaml"
 
   run-workflow:
     runs-on: ubuntu-latest
@@ -52,7 +52,7 @@ jobs:
       with:
         directory: './'
         snakefile: workflow/Snakefile
-        args: "--use-conda --show-failed-logs --cores 2 --conda-cleanup-pkgs cache"
+        args: "--configfile configs/workflow_test.yaml --use-conda --show-failed-logs --cores 2 --conda-cleanup-pkgs cache"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -61,5 +61,5 @@ jobs:
       with:
         directory: './'
         snakefile: workflow/Snakefile
-        args: "--report report.zip"
+        args: "--report report.zip --configfile configs/workflow_test.yaml"
     

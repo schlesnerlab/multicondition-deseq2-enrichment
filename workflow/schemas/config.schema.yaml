@@ -25,8 +25,17 @@ properties:
     properties:
       contrasts:
         type: object
+      shrink_lfc:
+        type: boolean
+      LFC_threshold:
+        type: number
+      pval_threshold:
+        type: number
     required:
       - contrasts
+      - shrink_lfc
+      - LFC_threshold
+      - pval_threshold
   dirs:
     type: object
     properties:
@@ -34,8 +43,12 @@ properties:
         type: string
       BASE_ANALYIS_DIR:
         type: string
+    required:
+      - BASE_ANALYSIS_DIR
   required:
   - samples
   - pca
   - diffexp
   - organism
+  - counts
+  - dirs

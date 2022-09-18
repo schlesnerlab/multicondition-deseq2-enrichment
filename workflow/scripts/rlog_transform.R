@@ -7,6 +7,9 @@ rld <- DESeq2::rlog(deseq_obj, blind = FALSE)
 saveRDS(rld, snakemake@output[["rld"]])
 
 norm_counts <- assay(rld,withDimnames = T) %>% as_tibble(rownames = "gene")
+og_gene_names <- norm_counts$gene
+norm_counts$gene <- stringr::str_extract(norm_counts$gene,
+                     pattern = "^ENS[A-Z0-9]*")
 # this variable holds a mirror name until
 # useEnsembl succeeds ("www" is last, because 
 # of very frequent "Internal Server Error"s)
@@ -63,7 +66,7 @@ if (gene_name_type == "ENSEMBL") {
             mart = mart,
             )
     colnames(g2g) <- c("gene", "gname")
-
+    
     annotated <- dplyr::left_join(norm_counts, g2g)
     annotated$gname <- ifelse(annotated$gname == '' | is.na(annotated$gname), 
            annotated$gene, annotated$gname)
@@ -74,5 +77,6 @@ if (gene_name_type == "ENSEMBL") {
     annotated$gname <- annotated$gene
 }
 #annotated$gene <- ifelse(annotated$external_gene_name == '', annotated$gene, annotated$external_gene_name)
-#annotated$external_gene_name <- NULL
+annotated$gene <- og_gene_names
+
 readr::write_tsv(annotated, snakemake@output[["fpkm"]])

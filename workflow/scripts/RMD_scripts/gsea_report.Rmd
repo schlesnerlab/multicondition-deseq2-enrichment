@@ -25,7 +25,7 @@ if (exists("snakemake")) {
 
   conf <- yaml::read_yaml("../../configs/workflow_unit_test.yaml")
   BASE_DIR <- conf$BASE_DATA_DIR
-  gsea_list <- as.list(file.path(BASE_DIR, glue::glue("results/diffexp/{names(conf$diffexp$contrasts)}.gseares.RDS")))
+  gsea_list <- as.list(file.path(BASE_DIR, glue::glue("results/diffexp/{names(conf$diffexp$contrasts$condition)}.gseares.RDS")))
   c_groups <- names(conf$diffexp$contrasts)
   names(gsea_list) <- c_groups
    gsea_list <- gsea_list[1:3]

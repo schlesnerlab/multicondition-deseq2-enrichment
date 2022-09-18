@@ -12,10 +12,10 @@ if (snakemake@threads > 1) {
 }
 if (!exists("snakemake")) {
     library(magrittr)
-    BASE_DIR <- ""
+    BASE_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/apelin_exp"
     cts <- file.path(BASE_DIR, "counts/all.tsv") %>% 
         read.table(header = T, row.names = "gene", check.names = F)
-    coldata <- read.table("./data/workflow_test/samples.tsv",
+    coldata <- read.table("../data/apelin_2020/VascAge_samples_apelin.tsv",
                           header = TRUE,
                           row.names = "sample",
                           check.names = FALSE)
@@ -41,7 +41,7 @@ if (!all(colnames(cts) == rownames(coldata))) {
 dds <- DESeqDataSetFromMatrix(
                               countData = cts,
                               colData = coldata,
-                              #    design = as.formula("~condition"))
+                              #design = as.formula("~condition"))
                               design = as.formula(snakemake@params[["model"]]),
 )
 

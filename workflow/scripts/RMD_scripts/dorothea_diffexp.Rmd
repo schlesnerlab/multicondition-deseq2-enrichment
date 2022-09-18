@@ -41,20 +41,22 @@ if (exists("snakemake")) {
   color_scheme <- snakemake@config[["group_colors"]][[cond_var]]
   organism <- snakemake@config[["organism"]]
 } else {
-  BASE_ANALYSIS_DIR = "../../data/test_workflow"
+  the_yaml <- yaml::read_yaml("../../configs/VascAge_Apelin_config.yaml")
+
+  BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/apelin_exp"
+  cond_id <- "condition"
+  comp_id <- "YECplusA-vs-YEC"
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), 'deseq2/rlog_transform.RDS.gz')
-  cond_var <- "condition"
-  diffexp_tb_path <- file.path(paste0(BASE_ANALYSIS_DIR),
-  "results/diffexp/condition/Del_8_17_homo_vs_wt.diffexp.tsv")
+  diffexp_tb_path <- file.path(BASE_ANALYSIS_DIR, 
+                               glue::glue("results/diffexp/{comp_id}.diffexp.tsv"))
   fpkm_path <- file.path(BASE_ANALYSIS_DIR, 'fpkm/all.tsv')
-  contrast_groups <- c("Del_8_17_homo", "wt")
+  contrast_groups <- c("YECplusA", "YEC")
   plot_path <- "."
   register(SerialParam())
-  #s_groups<- c("d0-lung", "d15-lung", "d22-lung", "d36-lung", "18m-lung")
+  s_groups<- c("YECplusA", "YEC")
   contrast_name <- glue::glue("{contrast_groups[[1]]} vs {contrast_groups[[2]]}")
-    the_yaml <- yaml::read_yaml("../../configs/workflow_unit_test.yaml")
   comp_groups <- the_yaml$comp_groups
-  color_scheme <- the_yaml$group_colors[[cond_var]]
+  color_scheme <- the_yaml$group_colors
   organism <- "Mus musculus"
 }
 dir.create(plot_path,recursive = T)
@@ -77,7 +79,7 @@ diffexp_tb <- read_tsv(diffexp_tb_path,  col_names = c('gene_id',
                                                  'pvalue', 'padj'), 
                                    skip = 1)
 #Normalized_counts <- getVarianceStabilizedData(dds_obj)
-Normalized_counts<- assay(dds_obj)
+Normalized_counts<- assay(vst(dds_obj,blind = FALSE))
 fpkm <- read_tsv(fpkm_path)
 filer <- fpkm %>% dplyr::filter(gene %in% rownames(Normalized_counts)) %>%  dplyr::filter(!duplicated(gname))
 
