@@ -45,7 +45,7 @@ if (exists("snakemake")) {
   mem_mb <- snakemake@resources[["mem_mb"]]
   time_limit <- (snakemake@resources[["time_min"]] - 20) * 60
   run_vanilla <- snakemake@params[["run_vanilla"]]
-  progeny_data <- "../data/progenyMembers.RData"
+  progeny_data <- "./workflow/data/progenyMembers.RData"
 } else {
   BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/APLN_KO"
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/all.rds")
