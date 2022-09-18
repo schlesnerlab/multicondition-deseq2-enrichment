@@ -61,9 +61,9 @@ group_colors:
 # Workflow control and management
 run_mitch: False
 run_carnival:
-  vanilla: True
+  vanilla: False
   inverse: False
   sample: False  
   joint_rep: False
 
-cplex_solver: "/home/heyer/software/external/CPLEX_Studio201/cplex/bin/x86-64_linux/cplex"
+cplex_solver: """
