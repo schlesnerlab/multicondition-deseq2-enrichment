@@ -20,7 +20,7 @@ if (exists("snakemake")) {
   temp_path <- snakemake@params[["temp_path"]]
   nr <- snakemake@resources[["nr"]]
   sample_id <- snakemake@wildcards[["sample"]]
-  progeny_data <- "./data/progenyMembers.RData"
+  progeny_data <- "./workflow/data/progenyMembers.RData"
 } else {
   base_path <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/APLN_KO"
   tf_act_path <- file.path(base_path, "dorothea/TF_act_sample_resolution.csv")
@@ -33,7 +33,7 @@ if (exists("snakemake")) {
   time_limit <- 3600
   run_vanilla <- FALSE
   sample_id <- "VascAge_Young-EC-Plus-5"
-  progeny_data <- "./data/progenyMembers.RData"
+  progeny_data <- "./workflow/data/progenyMembers.RData"
   nr <- 1
 }
 if (nr == 4) {
