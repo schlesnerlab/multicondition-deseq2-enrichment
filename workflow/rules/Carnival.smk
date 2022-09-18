@@ -1,4 +1,4 @@
-
+## Snakefile containg rules for CARNIVAL analysis
 
 rule run_carnival_vanilla:
     input:
