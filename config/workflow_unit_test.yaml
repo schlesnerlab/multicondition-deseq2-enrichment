@@ -61,7 +61,7 @@ group_colors:
 # Workflow control and management
 run_mitch: False
 run_carnival:
-  vanilla: False
+  vanilla: True
   inverse: False
   sample: False  
   joint_rep: False

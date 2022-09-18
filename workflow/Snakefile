@@ -9,7 +9,7 @@ min_version("6.15.1")
 ##### load config and sample sheets #####
 
 
-#configfile: "config/workflow_unit_test.yaml"
+# configfile: "config/workflow_unit_test.yaml"
 
 
 validate(config, schema="schemas/config.schema.yaml")
@@ -38,9 +38,11 @@ if config["run_mitch"]:
 if config["run_carnival"]["vanilla"]:
     salmon_files.extend(
         expand(
-            join(BASE_ANALYSIS_DIR, "results/reports/{type}/{condition}/join_report.html"),
+            join(
+                BASE_ANALYSIS_DIR, "results/reports/{type}/{condition}/join_report.html"
+            ),
             type=["carnival"],
-            condition = CONTRASTS.keys()
+            condition=CONTRASTS.keys(),
         )
     )
 
@@ -60,7 +62,10 @@ if config["run_carnival"]["inverse"]:
     if config["run_carnival"]["joint_rep"]:
         salmon_files.extend(
             expand(
-                join(BASE_ANALYSIS_DIR, "results/reports/{type}/{condition}/join_report.html"),
+                join(
+                    BASE_ANALYSIS_DIR,
+                    "results/reports/{type}/{condition}/join_report.html",
+                ),
                 type=["inversecarnival"],
                 condition=cond,
             )
