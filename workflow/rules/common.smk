@@ -1,9 +1,10 @@
 ### Snakefile
 # Contains input functions and other functions for snakemake rules
 
+
 def get_diffxp_files():
     """
-    Return all files from DE and enrichment analyses. 
+    Return all files from DE and enrichment analyses.
     """
     output_files = []
 
@@ -46,7 +47,7 @@ def get_diffxp_files():
                     ),
                     join(
                         BASE_ANALYSIS_DIR,
-                        "results/diffexp/{condition}/{contrast}.ma-plot.svg",
+                        "results/diffexp/{condition}/{contrast}.ma-plot.pdf",
                     ),
                     join(
                         BASE_ANALYSIS_DIR,
@@ -84,7 +85,7 @@ def get_count_matrix(wildcards):
     if "counts" in config:
         count_file = config["counts"]
     else:
-        count_file =  join(BASE_ANALYIS_DIR, "counts/all.tsv")
+        count_file = join(BASE_ANALYIS_DIR, "counts/all.tsv")
     return count_file
 
 
@@ -98,6 +99,10 @@ def get_deseq2_threads(wildcards=None):
 
 def get_contrast(wildcards):
     return config["diffexp"]["contrasts"][wildcards.condition][wildcards.contrast]
+
+
+def get_all_contrasts(wildcards):
+    return config["diffexp"]["contrasts"][wildcards.condition]
 
 
 def get_gsea_results(wildcards):
@@ -115,7 +120,7 @@ def get_gsea_results(wildcards):
 
 def get_diffexp_tables(wildcards):
     """
-    Retrieves all DE results for one condition given. 
+    Retrieves all DE results for one condition given.
     """
     cond = wildcards.condition
     output_files = expand(
@@ -124,13 +129,17 @@ def get_diffexp_tables(wildcards):
     )
     return output_files
 
+
 def get_carnival_objs(wildcards):
     """
     Retrieves Carnival results for one condition
     """
     cond = wildcards.condition
     output_files = expand(
-        join(BASE_ANALYSIS_DIR, "results/{{type}}/{{condition}}/{contrast}_carnival_res.RDS.gz"),
+        join(
+            BASE_ANALYSIS_DIR,
+            "results/{{type}}/{{condition}}/{contrast}_carnival_res.RDS.gz",
+        ),
         contrast=config["diffexp"]["contrasts"][cond],
     )
     return output_files

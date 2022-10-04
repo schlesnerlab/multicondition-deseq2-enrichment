@@ -21,7 +21,8 @@ if (exists("snakemake")) {
 
 ## Read and import data
 count_df_rlog <- readRDS(dds_obj_rlog) %>%
-  assay() %>% as.matrix()
+  assay() %>%
+  as.matrix()
 
 fpkm <- read_tsv(fpkm_path)
 
@@ -36,12 +37,18 @@ organism <- "mouse"
 
 prog_net <- decoupleR::get_progeny(organism = organism, top = 100)
 
-PathwayActivity_counts <- decoupleR::run_wmean(count_df_rlog, network = prog_net,
-                                                   .mor = "weight",
-                                                   times = 1000) %>% 
-  dplyr::filter(statistic == "norm_wmean") %>% dplyr::mutate(prog_score = (1-p_value) *sign(score)) %>%
-  tidyr::pivot_wider(id_cols = 'condition', names_from = 'source',
-              values_from = 'prog_score') %>%  tibble::column_to_rownames('condition') %>%
+PathwayActivity_counts <- decoupleR::run_wmean(count_df_rlog,
+  network = prog_net,
+  .mor = "weight",
+  times = 1000
+) %>%
+  dplyr::filter(statistic == "norm_wmean") %>%
+  dplyr::mutate(prog_score = (1 - p_value) * sign(score)) %>%
+  tidyr::pivot_wider(
+    id_cols = "condition", names_from = "source",
+    values_from = "prog_score"
+  ) %>%
+  tibble::column_to_rownames("condition") %>%
   as.matrix()
 
 

@@ -22,15 +22,11 @@ knitr::opts_chunk$set(
   echo = FALSE, warning = FALSE, message = FALSE, dev = "png",
   fig.width = 12, fig.height = 12
 )
-# library(DESeq2)
+
 library(magrittr)
-# require(tidyverse)
-# require(dplyr)
-# library(org.Mm.eg.db)
-# library(pheatmap)
-# mm <- org.Mm.eg.db
+
 library(clusterProfiler)
-# library(ReactomePA)
+
 library(enrichplot)
 library(ggupset)
 library(patchwork)
@@ -41,8 +37,7 @@ if (!require("RNAscripts")) {
 }
 library("RNAscripts")
 library("BiocParallel")
-# library(ensembldb)
-# library(AnnotationHub)
+
 ```
 
 
@@ -80,12 +75,13 @@ if (exists("snakemake")) {
   plot_path <- "./"
   LFC_threshold <- 0.5
   pvalue_threshold <- 0.05
-  enrich_list <- file.path(BASE_ANALYSIS_DIR, glue::glue("results/diffexp/{cond_id}/{comp_id}.gseares.RDS"))
+  enrich_list <- file.path(BASE_ANALYSIS_DIR, 
+                           glue::glue("results/diffexp/{cond_id}/{comp_id}.gseares.RDS"))
   conf <- yaml::read_yaml("../configs/VascAge_APLN_KO.yaml")
   group_colors <- conf[["group_colors"]] %>% unlist()
   organism <- "Mus musculus"
 }
-dir.create(plot_path, recursive = T)
+dir.create(plot_path, recursive = TRUE)
 
 
 dds_obj <- readRDS(dds_path)
@@ -327,7 +323,7 @@ do_gseaplots <- function(enrich_res, gene_stats = NULL, id_class = "ENTREZID") {
       enrich_read <- enrich_res
     }
     #  y <- enrichplot::heatplot(enrich_read, showCategory = 10, foldChange = gene_stats)
-    z <- enrichplot::upsetplot(enrich_res, foldChange = gene_stats)
+    z <- enrichplot::upsetplot(enrich_read, foldChange = gene_stats)
 
     return(list("upset" = z))
   }

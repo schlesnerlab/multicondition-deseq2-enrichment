@@ -280,7 +280,7 @@ plot_enrichment <- function(GSEA_table, X, Y, pval = "pval", pval_threshold = 0.
     ggplot2::theme(legend.position = "none")
 }
 
-#' Return the correct org_db 
+#' Return the correct org_db
 #'
 #' @param org_name Name of organism used in analysis
 #'

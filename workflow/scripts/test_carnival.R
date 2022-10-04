@@ -45,7 +45,7 @@ if (exists("snakemake")) {
   mem_mb <- snakemake@resources[["mem_mb"]]
   time_limit <- (snakemake@resources[["time_min"]] - 20) * 60
   run_vanilla <- snakemake@params[["run_vanilla"]]
-  progeny_data <- "../data/progenyMembers.RData"
+  progeny_data <- "./workflow/data/progenyMembers.RData"
 } else {
   BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/APLN_KO"
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/all.rds")
@@ -107,50 +107,56 @@ joined_df %>%
 
 
 
-#regulons <- dorothea_mm %>% dplyr::filter(confidence %in% c("A", "B"))
-organism  <- "mouse"
-doro_net <-  decoupleR::get_dorothea(organism = organism,levels =  c("A", "B", "C"))
+# regulons <- dorothea_mm %>% dplyr::filter(confidence %in% c("A", "B"))
+organism <- "mouse"
+doro_net <- decoupleR::get_dorothea(organism = organism, levels = c("A", "B", "C"))
 prog_net <- decoupleR::get_progeny(organism = organism, top = 100)
 
-PathwayActivity <- PathwayActivity_CARNIVALinput <- run_wmean(mat=diffexp_matrix, network = prog_net, .source='source', .target='target',
-                                                              .mor='weight', times = 1000, minsize = 5) %>% 
+PathwayActivity <- PathwayActivity_CARNIVALinput <- run_wmean(
+  mat = diffexp_matrix, network = prog_net, .source = "source", .target = "target",
+  .mor = "weight", times = 1000, minsize = 5
+) %>%
   dplyr::filter(statistic == "wmean") %>%
-  as.data.frame() 
+  as.data.frame()
 if (any(abs(PathwayActivity$score) > 1)) {
   stop("Progeny values exceeding abs(1)!!")
 }
-#PathwayActivity <- PathwayActivity_CARNIVALinput <- progeny(diffexp_matrix,
+# PathwayActivity <- PathwayActivity_CARNIVALinput <- progeny(diffexp_matrix,
 #  scale = TRUE, organism = "Mouse", top = 100, perm = 10000, z_scores = F
-#) %>%
+# ) %>%
 #  t() %>%
 #  as.data.frame() %>%
 #  tibble::rownames_to_column(var = "Pathway")
 
-#colnames(PathwayActivity)[2] <- "score"
-progeny_key <- setNames(object = PathwayActivity$score,
-                        nm = PathwayActivity$source)
+# colnames(PathwayActivity)[2] <- "score"
+progeny_key <- setNames(
+  object = PathwayActivity$score,
+  nm = PathwayActivity$source
+)
 
-prog_net %>% mutate(progeny_activity = recode(source, !!!progeny_key)) %>% 
+prog_net %>%
+  mutate(progeny_activity = recode(source, !!!progeny_key)) %>%
   mutate(carnival_score = sign(weight) * progeny_activity) -> prog_net
-prog_net %>% group_by(target) %>% 
+prog_net %>%
+  group_by(target) %>%
   summarise(carnival_score = mean(carnival_score)) -> prog_net_final
 
-tf_activities_stat <- decoupleR::run_wmean(diffexp_matrix, network = doro_net, times = 1000, minsize = 5) %>% 
+tf_activities_stat <- decoupleR::run_wmean(diffexp_matrix, network = doro_net, times = 1000, minsize = 5) %>%
   filter(statistic == "norm_wmean")
- # options = list(
+# options = list(
 #    minsize = 5, eset.filter = FALSE,
 #    cores = 1, verbose = FALSE, nes = TRUE
 #  )
-#)
+# )
 
 prog_net_final %>% filter(!(target %in% tf_activities_stat$source)) -> prog_net_final
 
-tf_activities <- tf_activities_CARNIVALinput <- tf_activities_stat%>% dplyr::select(source, score)
- 
+tf_activities <- tf_activities_CARNIVALinput <- tf_activities_stat %>% dplyr::select(source, score)
+
 
 ## Get Omnipath
 omniR <- import_omnipath_interactions(organism = 10090)
-#omniR <- import_pathwayextra_interactions(organism = 10090)
+# omniR <- import_pathwayextra_interactions(organism = 10090)
 # signed and directed
 omnipath_sd <- omniR %>% dplyr::filter(consensus_direction == 1 &
   (consensus_stimulation == 1 |
@@ -189,23 +195,23 @@ tf_vec <- tf_list$score[, ]
 names(tf_vec) <- gsub("^Trp", "Tp", names(tf_vec))
 
 # progeny for CARNIVAL
-#load(file = progeny_data)
-#progenyMembers$gene$p53 <- "TP53"
-#progmem_mouse <- purrr::map(progenyMembers$gene, convertHumanGeneHomologs, jax_database = mouse_human_homologs)
-#progenyMembers$gene <- progmem_mouse
-#progenyMembers$gene$p53 <- "Tp53"
+# load(file = progeny_data)
+# progenyMembers$gene$p53 <- "TP53"
+# progmem_mouse <- purrr::map(progenyMembers$gene, convertHumanGeneHomologs, jax_database = mouse_human_homologs)
+# progenyMembers$gene <- progmem_mouse
+# progenyMembers$gene$p53 <- "Tp53"
 
 
-#PathwayActivity_carnival <- data.frame(PathwayActivity, stringsAsFactors = F)
-#rownames(PathwayActivity_carnival) <- PathwayActivity_carnival$Pathway
-#PathwayActivity_carnival$Pathway <- NULL
-#progenylist <- assignPROGENyScores(
+# PathwayActivity_carnival <- data.frame(PathwayActivity, stringsAsFactors = F)
+# rownames(PathwayActivity_carnival) <- PathwayActivity_carnival$Pathway
+# PathwayActivity_carnival$Pathway <- NULL
+# progenylist <- assignPROGENyScores(
 #  progeny = t(PathwayActivity_carnival),
 #  progenyMembers = progenyMembers,
 #  id = "gene",
 #  access_idx = 1
-#)
-#progeny_vec <- progenylist$score
+# )
+# progeny_vec <- progenylist$score
 progeny_vec <- setNames(prog_net_final$carnival_score, nm = prog_net_final$target)
 # get initial nodes
 

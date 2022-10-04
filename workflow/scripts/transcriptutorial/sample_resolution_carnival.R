@@ -20,7 +20,7 @@ if (exists("snakemake")) {
   temp_path <- snakemake@params[["temp_path"]]
   nr <- snakemake@resources[["nr"]]
   sample_id <- snakemake@wildcards[["sample"]]
-  progeny_data <- "./data/progenyMembers.RData"
+  progeny_data <- "./workflow/data/progenyMembers.RData"
 } else {
   base_path <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/APLN_KO"
   tf_act_path <- file.path(base_path, "dorothea/TF_act_sample_resolution.csv")
@@ -33,7 +33,7 @@ if (exists("snakemake")) {
   time_limit <- 3600
   run_vanilla <- FALSE
   sample_id <- "VascAge_Young-EC-Plus-5"
-  progeny_data <- "./data/progenyMembers.RData"
+  progeny_data <- "./workflow/data/progenyMembers.RData"
   nr <- 1
 }
 if (nr == 4) {
@@ -55,9 +55,9 @@ mouse_human_homologs <- readr::read_tsv("http://www.informatics.jax.org/download
 ## Get Omnipath
 get_organism_number <- function(organism_name) {
   if (organism_name == "human") {
-    organism_number = 9606
+    organism_number <- 9606
   } else if (organism_name == "mouse") {
-    organism_number = 10090
+    organism_number <- 10090
   }
   organism_number
 }
@@ -107,14 +107,14 @@ tfList <- generateTFList(tf_activities_carnival,
 
 # progeny for CARNIVAL
 load(file = progeny_data)
-#progenyMembers$gene$p53 <- "TP53"
-if(organism == "mouse") {
+# progenyMembers$gene$p53 <- "TP53"
+if (organism == "mouse") {
   progmem_mouse <- purrr::map(progenyMembers$gene, convertHumanGeneHomologs, mouse_human_homologs)
   progenyMembers$gene <- progmem_mouse
   progenyMembers$gene$p53 <- "Tp53"
-  names(progenyMembers$gene) [names(progenyMembers$gene) == "JAK.STAT"] <- "JAK-STAT"
+  names(progenyMembers$gene)[names(progenyMembers$gene) == "JAK.STAT"] <- "JAK-STAT"
 } else {
-  progenyMembers$gene$p53 <- "TP53"  
+  progenyMembers$gene$p53 <- "TP53"
 }
 pathway_activity_carnival <- data.frame(pathway_activity, stringsAsFactors = F)
 rownames(pathway_activity_carnival) <- pathway_activity_carnival %>% dplyr::pull(pathways)

@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-options(error = traceback, echo = False)
+options(error = traceback, echo = FALSE)
 library(readr)
 library(piano)
 library(dplyr)
@@ -38,23 +38,27 @@ across all comparison groups defined in the original yaml.
 ```{r Snakemake setup, echo = F}
 if (exists("snakemake")) {
   carnival_paths <- snakemake@input[["carnival_objs"]] %>% as.character()
-  names(carnival_paths) <- names(snakemake@config[["diffexp"]][["contrasts"]])
-  contrast_names <-  names(snakemake@config[["diffexp"]][["contrasts"]])
+  cond_id <- snakemake@wildcards[["condition"]]
+  names(carnival_paths) <- names(snakemake@config[["diffexp"]][["contrasts"]][[cond_id]])
+  contrast_names <-  names(snakemake@config[["diffexp"]][["contrasts"]][[cond_id]])
   write(carnival_paths, file = stderr())
   write(names(carnival_paths), file = stderr())
   tt_basepath <- snakemake@params[["tutorial_source_path"]]
    # Output Files
   outpath <- snakemake@output[[1]]
-  organism <- snakemake@config[["organsim"]]
+  organism <- snakemake@config[["organism"]]
 } else {
-  BASE_ANALYSIS_DIR = ''
-  the_yaml <- file.path("../../configs/worflow_test.yaml")
+  BASE_ANALYSIS_DIR = '/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/apelin_exp'
+  cond_id <- "condition"
+  the_yaml <- file.path("../../configs/VascAge_Apelin_config.yaml")
   yaml_me <- yaml::read_yaml(the_yaml)
-  carnival_paths <- ""
-  names(carnival_paths) <- names(yaml_me$comp_groups)
-  contrast_names <-  names(yaml_me$comp_groups)
+  carnival_paths <- file.path(BASE_ANALYSIS_DIR, "results/inversecarnival/condition",  
+                              paste0(names(yaml_me$diffexp$contrasts$condition), "_carnival_res.RDS.gz"))
+  names(carnival_paths) <- names(yaml_me$diffexp$contrasts$condition)
+  contrast_names <-  names(yaml_me$diffexp$contrasts$condition)
   base_path <- ""
-  tt_basepath <- ""
+  tt_basepath <- "../transcriptutorial"
+  organism <- "Mus musculus"
 }
 source(file.path(tt_basepath, "support_enrichment.r"))
 source(file.path(tt_basepath, "support_networks.r"))
@@ -210,9 +214,9 @@ plot_grid(dd, ddp, labels = "auto", rel_widths = c(1, 2))
 ```
 ## Network similarities
 
-Here we jointly analyze the simliarities between networks.
+Here we jointly analyze the similarities between networks.
 
-In the first image we calulate the jaccard distance of edges between comparison groups
+In the first image we calculate the jaccard distance of edges between comparison groups
 and plot these in the heatmap. 
 - 0 = completely different
 - 1 = identical 
@@ -272,28 +276,36 @@ get_common_interactions <-  function(interaction_list, samples, psmpl_per = 95, 
     
   }
 
+  shared_interactions_WT <- NULL
+  while(is.null(shared_interactions_WT)) {
+    if(psmpl_per <= 0) {break}
+    psmpl_per <- psmpl_per - 5 
+    shared_interactions_WT = getCoreInteractions(topology = interaction_list, psmpl = psmpl_per)
+    }
   
-  shared_interactions_WT = getCoreInteractions(topology = interaction_list, psmpl = psmpl_per)
-
 # Visualise the interactions
-  colnames(shared_interactions_WT) = c("from", "sign", "to")
-  labels_edge = c("-1" = "inhibition", "1" = "activation")
-  nodes = data.frame(union(shared_interactions_WT$from, shared_interactions_WT$to))
-  colnames(nodes) = "nodes"
-  nodes$label = nodes$nodes
-  if (!is.null(carnival_list)) {
-    nodes <- dplyr::inner_join(nodes, nodos) %>% mutate(sd = matrixStats::rowSds(as.matrix(.[samples])))
+  if (!is.null(shared_interactions_WT)) {
+    colnames(shared_interactions_WT) = c("from", "sign", "to")
+    labels_edge = c("-1" = "inhibition", "1" = "activation")
+    nodes = data.frame(union(shared_interactions_WT$from, shared_interactions_WT$to))
+    colnames(nodes) = "nodes"
+    nodes$label = nodes$nodes
+    if (!is.null(carnival_list)) {
+      nodes <- dplyr::inner_join(nodes, nodos) %>% mutate(sd = matrixStats::rowSds(as.matrix(.[samples])))
+    } else {
+      nodes$sd <- rep(1, nrow(nodes)  )
+    }
+    p <- tidygraph::tbl_graph(nodes = nodes, edges = shared_interactions_WT) %>%
+      ggraph::ggraph(layout = "auto") + 
+      geom_node_point(aes(color =sd), size = 8) +
+      geom_edge_link(arrow = arrow(), aes(edge_colour=as.factor(sign))) +
+      theme_graph() + scale_color_viridis(option = "E") +
+      geom_node_text(aes(label = label), nudge_y = 0.04) + 
+      labs(caption = glue::glue("Overlap in {psmpl_per} percent of groups"))
   } else {
-    nodes$sd <- rep(1, nrow(nodes)  )
+    p <- NULL
   }
-
-  
-  tidygraph::tbl_graph(nodes = nodes, edges = shared_interactions_WT) %>%
-    ggraph::ggraph(layout = "auto") + 
-    geom_node_point(aes(color =sd), size = 8) +
-    geom_edge_link(arrow = arrow(), aes(edge_colour=as.factor(sign))) +
-    theme_graph() + scale_color_viridis(option = "E") +
-   geom_node_text(aes(label = label), nudge_y = 0.04)
+  p
 }
 
 get_common_interactions(interactions[],names(interactions), 100, carnival_list = carnival_sample_resolution) + ggtitle("Between all groups")
@@ -421,7 +433,7 @@ if (all(c(contrast_names) %in% names(interactions))) {
                       dplyr::filter(AvgAct != 0)
   })
 
-  node_list <- nodes
+  node_list <- purrr::map(nodes, pull, Node)
   names(node_list) <- contrast_names
   upset_act <-UpSetR::fromList(node_list)
 

@@ -1,16 +1,23 @@
+## Snakefile containg rules for CARNIVAL analysis
 
 
 rule run_carnival_vanilla:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
-        table=join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"),
+        table=join(
+            BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"
+        ),
+        fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
     output:
         carnival_out=join(
-            BASE_ANALYSIS_DIR, "results/carnival/{condition}/{contrast}_carnival_res.RDS.gz"
+            BASE_ANALYSIS_DIR,
+            "results/carnival/{condition}/{contrast}_carnival_res.RDS.gz",
         ),
     params:
         s_groups=samples.condition.unique(),
-        temp_path=temp(join(BASE_ANALYSIS_DIR, "results/carnival/temp/{condition}/{contrast}/")),
+        temp_path=temp(
+            join(BASE_ANALYSIS_DIR, "results/carnival/temp/{condition}/{contrast}/")
+        ),
         run_vanilla=True,
     conda:
         "../envs/carnival.yaml"
@@ -28,15 +35,22 @@ rule run_carnival_vanilla:
 rule run_inverse_carnival:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
-        table=join(BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"),
+        table=join(
+            BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"
+        ),
+        fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
     output:
         carnival_out=join(
-            BASE_ANALYSIS_DIR, "results/inversecarnival/{condition}/{contrast}_carnival_res.RDS.gz"
+            BASE_ANALYSIS_DIR,
+            "results/inversecarnival/{condition}/{contrast}_carnival_res.RDS.gz",
         ),
     params:
         s_groups=samples.condition.unique(),
         temp_path=temp(
-            join(BASE_ANALYSIS_DIR, "results/inversecarnival/temp/{condition}/{contrast}/")
+            join(
+                BASE_ANALYSIS_DIR,
+                "results/inversecarnival/temp/{condition}/{contrast}/",
+            )
         ),
         run_vanilla=False,
     conda:
@@ -55,11 +69,13 @@ rule run_inverse_carnival:
 rule carnival_deseq_report:
     input:
         carnival_obj=join(
-            BASE_ANALYSIS_DIR, "results/{type}/{condition}/{contrast}_carnival_res.RDS.gz"
+            BASE_ANALYSIS_DIR,
+            "results/{type}/{condition}/{contrast}_carnival_res.RDS.gz",
         ),
     output:
         carnival_rep=join(
-            BASE_ANALYSIS_DIR, "results/reports/{type}/{condition}/{contrast}_results.html"
+            BASE_ANALYSIS_DIR,
+            "results/reports/{type}/{condition}/{contrast}_results.html",
         ),
     params:
         tutorial_source_path="scripts/transcriptutorial/",
@@ -77,9 +93,11 @@ rule carnival_deseq_report:
 
 rule carnival_joint_report:
     input:
-        carnival_objs=get_carnival_objs
+        carnival_objs=get_carnival_objs,
     output:
-        carnival_rep=join(BASE_ANALYSIS_DIR, "results/reports/{type}/{condition}/join_report.html"),
+        carnival_rep=join(
+            BASE_ANALYSIS_DIR, "results/reports/{type}/{condition}/join_report.html"
+        ),
     params:
         tutorial_source_path="scripts/transcriptutorial/",
     conda:
@@ -97,6 +115,7 @@ rule carnival_joint_report:
 rule run_sample_dorothea:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/rlog_transform.RDS.gz"),
+        fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
     output:
         sample_dorothea_table=join(
             BASE_ANALYSIS_DIR, "dorothea/TF_act_sample_resolution.csv"
@@ -116,6 +135,7 @@ rule run_sample_dorothea:
 rule run_sample_progeny:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/rlog_transform.RDS.gz"),
+        fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
     output:
         sample_progeny_table=join(BASE_ANALYSIS_DIR, "progeny/sample_progney.csv"),
     conda:

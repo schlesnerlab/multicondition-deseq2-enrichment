@@ -43,6 +43,7 @@ pca:
 diffexp:
   pval_threshold: 0.05 
   LFC_threshold: 0.5
+  shrink_lfc: True
     # contrasts for the deseq2 results method
   contrasts:
     condition: # Here column in sample sheet 
@@ -65,4 +66,4 @@ run_carnival:
   sample: False  
   joint_rep: False
 
-cplex_solver: "/home/heyer/software/external/CPLEX_Studio201/cplex/bin/x86-64_linux/cplex"
+cplex_solver: ""

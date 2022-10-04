@@ -73,7 +73,7 @@ rule deseq2:
         ),
         ma_plot=report(
             join(
-                BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.ma-plot.svg"
+                BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.ma-plot.pdf"
             ),
             "../report/ma.rst",
         ),
@@ -156,7 +156,7 @@ rule run_gsea:
     threads: 1
     resources:
         time_min=59 * 4,
-        mem_mb=8192 * 4,
+        mem_mb=8192 * 5,
     script:  #
         "../scripts/run_gsea.R"
 
@@ -167,7 +167,7 @@ rule gsea_report:
     output:
         join(BASE_ANALYSIS_DIR, "reports/deseq2/{condition}_joint_gsea_report.html"),
     params:
-        contrast_groups=config["diffexp"]["contrasts"],
+        contrast_groups=get_all_contrasts,
         plot_path=directory(join(BASE_ANALYSIS_DIR, "reports/deseq2/{condition}_plots")),
     conda:
         "../envs/R_4.yaml"
@@ -192,7 +192,7 @@ rule cohort_wide_comparison:
             BASE_ANALYSIS_DIR, "reports/deseq2/{condition}_cohort_wide_comparison.html"
         ),
     params:
-        contrast=config["diffexp"]["contrasts"],
+        contrast=get_all_contrasts,
     conda:
         "../envs/deseq2.yaml"
     log:
@@ -246,7 +246,7 @@ rule export_diffexp_xlsx:
         ),
     params:
         samp_map=config["samples"],
-        contrast_groups=config["diffexp"]["contrasts"],
+        contrast_groups=get_all_contrasts,
     conda:
         "../envs/R_4.yaml"
     resources:
@@ -280,7 +280,7 @@ rule run_dorothea:
 
 rule run_dorothea_diffexp:
     input:
-        dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/rlog_transform.RDS.gz"),
+        dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
         table=join(
             BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"
         ),

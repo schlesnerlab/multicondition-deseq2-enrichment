@@ -15,19 +15,22 @@ if (snakemake@threads > 1) {
 dds <- readRDS(snakemake@input[[1]])
 
 contrast <- c(snakemake@wildcards[["condition"]], snakemake@params[["contrast"]])
-
 res <- results(dds, contrast = contrast, parallel = parallel)
+resstat <- res$stat
 # shrink fold changes for lowly expressed genes
-# LFC shrinkage remains deactivated since it doesn't work with support how we run
-# DESeq2
-# 
-#res <- lfcShrink(dds, contrast = contrast , res = res)
-
+res <- lfcShrink(dds, contrast = contrast, res = res, type = "ashr")
 # sort by p-value
+res$stat <- resstat
+res <- res[, c(
+  "baseMean",
+  "log2FoldChange",
+  "lfcSE", "stat",
+  "pvalue", "padj"
+)]
 res <- res[order(res$padj), ]
 
 # store results
-svg(snakemake@output[["ma_plot"]])
+pdf(snakemake@output[["ma_plot"]])
 plotMA(res, ylim = c(-2, 2))
 dev.off()
 

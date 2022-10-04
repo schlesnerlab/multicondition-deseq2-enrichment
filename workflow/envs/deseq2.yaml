@@ -33,6 +33,7 @@ dependencies:
   - bioconductor-xvector 
   - bioconductor-zlibbioc 
   - r-acepack 
+  - r-ashr
   - r-backports 
   - r-base64enc 
   - r-bh 
