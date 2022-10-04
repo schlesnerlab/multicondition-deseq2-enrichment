@@ -156,7 +156,7 @@ rule run_gsea:
     threads: 1
     resources:
         time_min=59 * 4,
-        mem_mb=8192 * 4,
+        mem_mb=8192 * 5,
     script:  #
         "../scripts/run_gsea.R"
 
