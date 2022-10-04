@@ -35,14 +35,16 @@ library(RNAscripts)
 
 if (exists("snakemake")) {
   diffexp_tables_paths <- snakemake@input[["tables"]]
-  contrast_list <- snakemake@params[["contrast"]]
+  contrast_groups <- snakemake@params[["contrast"]]
+  contrast_list <- names(snakemake@params[["contrast"]])
   cond_id <- snakemake@wildcards[["condition"]]
   fpkm_path <- snakemake@input[["fpkm"]]
   dds_path <- snakemake@input[["dds_obj"]]
   rld_path <- snakemake@input[["rld"]]
   write(paste0(
-    class(diffexp_tables_paths), " and ",
-    class(contrast_list)
+    class(diffexp_tables_paths), length(diffexp_tables_paths), 
+    " and ",
+    class(contrast_list), " ", length(contrast_list)
   ), file = stderr())
   threads <- snakemake@threads
   lfc_threshold <- snakemake@config[["diffexp"]][["LFC_threshold"]]
@@ -50,8 +52,8 @@ if (exists("snakemake")) {
   group_colors <- snakemake@config[["group_colors"]][[cond_id]] %>% unlist()
   run_pert <- snakemake@config[["perform_perturbation"]]
 } else {
-  BASE_ANALYSIS_DIR <- "../data/test_workflow"
-  conf <- yaml::read_yaml("../configs/workflow_unit_test.yaml")
+  conf <- yaml::read_yaml("../../configs/VascAge_Apelin_config.yaml")
+  BASE_ANALYSIS_DIR <- conf$dirs$BASE_ANALYSIS_DIR
   cond_id <- "condition"
   diffexp_tables_paths <- as.list(file.path(
     BASE_ANALYSIS_DIR,
@@ -116,7 +118,27 @@ The data table below it marks the diffexp status of all the genes found here for
 gene if it is deemed as differentially expressed across multiple groups. 
 
 ```{r Upset, echo=FALSE}
+build_comb_gene_set <- function(comb_mat, comb_mat_order) {
+  combination_gene_sets <- list()
+  for (c_name in ComplexHeatmap::comb_name(comb_mat)) {
+    gnames <- ComplexHeatmap::extract_comb(m = comb_mat, comb_name = c_name)
 
+    groups_index <- stringr::str_split(c_name, "") %>% unlist()
+    group_names <- ComplexHeatmap::set_name(comb_mat)[as.logical(as.numeric(groups_index))]
+    merged_group_name <- paste(group_names, collapse = " + ")
+
+
+
+    combination_gene_sets[[merged_group_name]] <- tibble::tibble(gene_names = gnames, 
+                                                                 lfc = rep(0, length(gnames)))
+  }
+  if (length(combination_gene_sets) > 30) {
+    combination_gene_sets <- combination_gene_sets[c(match(names(comb_mat_order), ComplexHeatmap::comb_name(comb_mat))[1:30])]
+  } else {
+    combination_gene_sets <- combination_gene_sets
+  }
+  combination_gene_sets
+}
 group_name_combinations <- c()
 
 gene_names <- purrr::map(Big_tables, function(x) {
@@ -161,32 +183,6 @@ if (length(sig_gene_names) > 1) {
 ```
 
 ```{r, echo = FALSE}
-build_comb_gene_set <- function(comb_mat, comb_mat_order) {
-  combination_gene_sets <- list()
-  for (c_name in ComplexHeatmap::comb_name(comb_mat)) {
-    gnames <- ComplexHeatmap::extract_comb(m = comb_mat, comb_name = c_name)
-
-    groups_index <- stringr::str_split(c_name, "") %>% unlist()
-    group_names <- ComplexHeatmap::set_name(comb_mat)[as.logical(as.numeric(groups_index))]
-    merged_group_name <- paste(group_names, collapse = " + ")
-
-
-
-    combination_gene_sets[[merged_group_name]] <- tibble::tibble(gene_names = gnames, 
-                                                                 lfc = rep(0, length(gnames)))
-  }
-  if (length(combination_gene_sets) > 30) {
-    combination_gene_sets <- combination_gene_sets[c(match(names(comb_mat_order), ComplexHeatmap::comb_name(comb_mat))[1:30])]
-  } else {
-    combination_gene_sets <- combination_gene_sets
-  }
-  combination_gene_sets
-}
-
-
-
-
-
 
 
 #' Create dynamic table from significant gene names
@@ -266,7 +262,8 @@ for (set_n in names(H_res)) {
            "")
     cat("\n")
     cat("\n")
-    ifelse(nrow(cnet_plots[[set_n]]$data) > 0, plot(cnet_plots[[set_n]]), "")
+    ifelse(nrow(cnet_plots[[set_n]]$data) > 5, 
+           plot(cnet_plots[[set_n]]), "")    
     cat("\n \n")
   }
 }

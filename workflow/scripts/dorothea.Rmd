@@ -40,7 +40,7 @@ if (exists("snakemake")) {
   samp_map <- snakemake@params[["samp_map"]]
   plot_path <- snakemake@params[["plot_path"]]
   comp_groups <- snakemake@config[["signif_comp"]]
-  color_scheme <- snakemake@config[["group_colors"]]
+  color_scheme <- purrr::map(snakemake@config[["group_colors"]], unlist)
   organism <- snakemake@config[["organism"]]
 } else {
   BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/apelin_exp_test"
@@ -53,8 +53,8 @@ if (exists("snakemake")) {
   plot_path <- "./"
   the_yaml <- yaml::read_yaml("../../configs/VascAge_Apelin_config.yaml")
   comp_groups <- the_yaml$comp_groups
-  color_scheme <- the_yaml$group_colors
-}
+  color_scheme <- purrr::map(the_yaml$group_colors, unlist)
+  }
 if (!dir.exists(plot_path)) {
   dir.create(plot_path)
 }
@@ -71,7 +71,7 @@ After loading the data we replace ensembl IDs with gene symbols. We calcuate the
 
 dds_file <- readRDS(dds_path)
 
-# Normalized_counts <- getVarianceStabilizedData(dds_obj)
+#Normalized_counts <- getVarianceStabilizedData(dds_file)
 Normalized_counts <- assay(vst(dds_file, blind = F))
 fpkm <- read_tsv(fpkm_path)
 filer <- fpkm %>%
@@ -105,12 +105,22 @@ colnames(viper_net) <-colnames(dorothea_mm)
 tf_activities <- decoupleR::run_viper(expression_matrix, net,
                                       minsize = 4
 )
+tf_activities %>%
+  dplyr::filter(statistic == "viper") %>%
+  tidyr::pivot_wider(
+    id_cols = "condition", names_from = "source",
+    values_from = "score"
+  ) %>%
+  tibble::column_to_rownames("condition") %>%
+  as.matrix() %>% 
+  t() -> tf_activities
+
 
 plot_doro_hm <- function(dds, cond, color_vec, p_data) {
-  anno_vec <- dds_file@colData %>% as.data.frame()%>%pull(!!cond)
+  anno_vec <- dds_file@colData %>% as.data.frame()%>% pull(!!cond)
 
   col_palette <- RColorBrewer::brewer.pal(length(unique(anno_vec)),
-  name = "Set1"
+    name = "Set1"
   )
 
   ha <- HeatmapAnnotation(
@@ -118,7 +128,7 @@ plot_doro_hm <- function(dds, cond, color_vec, p_data) {
   col = list(
     group =
       as_vector(color_vec)
-  )
+    )
   )
 
   ch <- Heatmap(p_data,

@@ -9,9 +9,10 @@ if (!require(RNAscripts)) {
 library(RNAscripts)
 if (exists("snakemake")) {
   diffexp_tb_path <- snakemake@input[["table"]]
+  cond_id <- snakemake@wildcards[["condition"]]
   fpkm_path <- snakemake@input[["fpkm"]]
   samp_map <- snakemake@params[["samp_map"]]
-  contrast_groups <- snakemake@config[["diffexp"]][["contrasts"]]
+  contrast_groups <- snakemake@config[["diffexp"]][["contrasts"]][[cond_id]]
   contrast_names <- snakemake@params[["contrast_groups"]]
   names(contrast_groups) <- names(contrast_names)
   output_path <- snakemake@output[["outpath"]]
@@ -22,14 +23,15 @@ if (exists("snakemake")) {
   pval_threshold <- snakemake@config[["diffexp"]][["pval_threshold"]]
   lfc_threshold <- snakemake@config[["diffexp"]][["LFC_threshold"]]
 } else {
-  BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/cre_2022/"
+  BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/apelin_exp_test"
 
-  test_confg <- yaml::read_yaml("/desktop-home/heyer/projects/Vascular_Aging/RNAseq/rna-seq-star-deseq2/configs/VascAge_cre_config.yaml")
-  contrast_groups <- test_confg$diffexp$contrasts
-  contrast_names <- test_confg$diffexp$contrasts
-  diffexp_tb_path <- as.list(file.path(glue(
+  test_config <- yaml::read_yaml("/desktop-home/heyer/projects/Vascular_Aging/RNAseq/multicondition-deseq2-enrichment/configs/VascAge_Apelin_config.yaml")
+  cond_id <- "condition"
+  contrast_groups <- test_config$diffexp$contrasts$condition
+  contrast_names <- test_config$diffexp$contrasts$condition
+  diffexp_tb_path <- as.list(file.path(
     BASE_ANALYSIS_DIR,
-    "results/diffexp/{names(contrast_groups)}.diffexp.tsv"
+    glue::glue("results/diffexp/condition/{names(contrast_groups)}.diffexp.tsv"
   )))
 
   names(diffexp_tb_path) <- names(contrast_groups)
@@ -37,8 +39,8 @@ if (exists("snakemake")) {
   pval_threshold <- 0.05
 
   fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
-  samp_map <- "/desktop-home/heyer/projects/Vascular_Aging/RNAseq/rna-seq-star-deseq2/data/cre_2022/samples.tsv"
-  output_path <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/cre_2022/results/diffexp/excel_tables/diff_exp_man.xlsx"
+  samp_map <- "/desktop-home/heyer/projects/Vascular_Aging/RNAseq/rna-seq-star-deseq2/data/apelin_2020/VascAge_samples_apelin.tsv"
+  output_path <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/apelin_exp_test/results/diffexp/condition/excel_tables/diff_exp_man.xlsx"
 }
 
 
@@ -106,5 +108,6 @@ names(output_list) <- purrr::map_chr(
     comp_name
   }
 )
+print(names(output_list))
 # names(output_list) <- names(contrast_names)
 openxlsx::write.xlsx(x = output_list, file = output_path, )

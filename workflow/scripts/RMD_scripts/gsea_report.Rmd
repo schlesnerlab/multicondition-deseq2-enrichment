@@ -23,10 +23,10 @@ if (exists("snakemake")) {
   names(gsea_list) <- names(c_groups)
 } else {
 
-  conf <- yaml::read_yaml("../../configs/workflow_unit_test.yaml")
-  BASE_DIR <- conf$BASE_DATA_DIR
-  gsea_list <- as.list(file.path(BASE_DIR, glue::glue("results/diffexp/{names(conf$diffexp$contrasts$condition)}.gseares.RDS")))
-  c_groups <- names(conf$diffexp$contrasts)
+  conf <- yaml::read_yaml("../../../configs/VascAge_Apelin_config.yaml")
+  BASE_DIR <- conf$dirs$BASE_ANALYSIS_DIR
+  gsea_list <- as.list(file.path(BASE_DIR, glue::glue("results/diffexp/condition/{names(conf$diffexp$contrasts$condition)}.gseares.RDS")))
+  c_groups <- names(conf$diffexp$contrasts$condition)
   names(gsea_list) <- c_groups
    gsea_list <- gsea_list[1:3]
   plot_path <- glue::glue("{BASE_DIR}/reports/deseq2")
