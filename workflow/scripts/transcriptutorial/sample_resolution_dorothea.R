@@ -43,28 +43,29 @@ rename_count_rownames <- function(count_table, fpkm_table) {
 count_df_rlog <- rename_count_rownames(
   count_table = count_df_rlog,
   fpkm_table = fpkm
-) 
+)
 
-#regulons <- dorothea_mm %>% dplyr::filter(confidence %in% c("A", "B", "C"))
-doro_net <-  decoupleR::get_dorothea(organism = "mouse",levels =  c("A", "B", "C"))
+# regulons <- dorothea_mm %>% dplyr::filter(confidence %in% c("A", "B", "C"))
+doro_net <- decoupleR::get_dorothea(organism = "mouse", levels = c("A", "B", "C"))
 
-TF_activity <- decoupleR::run_wmean(count_df_rlog, network = doro_net, times = 1000, minsize = 5) %>% 
-  dplyr::filter(statistic == "norm_wmean") %>% dplyr::select(source, condition, score) %>%
+TF_activity <- decoupleR::run_wmean(count_df_rlog, network = doro_net, times = 1000, minsize = 5) %>%
+  dplyr::filter(statistic == "norm_wmean") %>%
+  dplyr::select(source, condition, score) %>%
   tidyr::pivot_wider(names_from = condition, values_from = score)
-                                    
-#TF_activity <- run_viper(count_df_rlog,
+
+# TF_activity <- run_viper(count_df_rlog,
 #  regulons = regulons,
 #  options = list(
 #    method = "scale", minsize = 4,
 #    eset.filter = FALSE, cores = threads,
 #    verbose = FALSE
 #  )
-#) %>% as.data.frame()
+# ) %>% as.data.frame()
 ### Preparing dorothea
 
 ## Dorothea/viper
 
-#TF_activity$TF <- row.names(TF_activity)
+# TF_activity$TF <- row.names(TF_activity)
 
 
 readr::write_csv(TF_activity, outpath)

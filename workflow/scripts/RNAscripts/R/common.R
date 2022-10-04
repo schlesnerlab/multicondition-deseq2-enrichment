@@ -15,11 +15,12 @@ split_contrast_groups <- function(cont) {
 #' @importFrom magrittr %>%
 #' @export
 join_tables <- function(DEseq_tb, fpkm) {
-
   diff_exp <- DEseq_tb
 
-  filer <- fpkm %>% dplyr::filter(gene %in% diff_exp$gene_id) %>% dplyr::filter(!duplicated(gene))
-  joined_df <- dplyr::inner_join(filer, DEseq_tb, by = c('gene' = 'gene_id')) %>% dplyr::arrange(padj)
+  filer <- fpkm %>%
+    dplyr::filter(gene %in% diff_exp$gene_id) %>%
+    dplyr::filter(!duplicated(gene))
+  joined_df <- dplyr::inner_join(filer, DEseq_tb, by = c("gene" = "gene_id")) %>% dplyr::arrange(padj)
 
   return(joined_df)
 }
@@ -37,15 +38,16 @@ mean_tibble_from_mat <- function(mat, extra_col = NULL, contrast_groups = contra
   mat_tb <- tibble::as_tibble(mat)
 
   mean_tb <- tibble::tibble(.rows = nrow(mat_tb))
-  for( gr in contrast_groups) {
-    col_n <- s_map %>% dplyr::filter(condition == gr) %>% dplyr::pull(sample)
-    mean_tb[[gr]] <- rowMeans(dplyr::select(mat_tb, col_n ))
+  for (gr in contrast_groups) {
+    col_n <- s_map %>%
+      dplyr::filter(condition == gr) %>%
+      dplyr::pull(sample)
+    mean_tb[[gr]] <- rowMeans(dplyr::select(mat_tb, col_n))
   }
-  if("gname" %in% colnames(mat_tb)) {
-    mean_tb["gname"] <- mat_tb %>% dplyr::select('gname')
+  if ("gname" %in% colnames(mat_tb)) {
+    mean_tb["gname"] <- mat_tb %>% dplyr::select("gname")
   }
-  if("padj" %in% colnames(mat_tb)) {
-
+  if ("padj" %in% colnames(mat_tb)) {
     mean_tb["padj"] <- mat_tb %>% dplyr::select("padj")
   }
   if (!is.null(extra_col)) {
@@ -79,25 +81,25 @@ check_against_index <- function(info, index) {
 #' @export
 #'
 #' @examples
-#' create_overlap_matrix(list("g1" = c("gene1", "gene2, "gene3"), "g2" = c("gene1")))
-#' 
+#' create_overlap_matrix(list("g1" = c("gene1", "gene2", "gene3"), "g2" = c("gene1")))
+#'
 create_overlap_matrix <- function(sig_gene_names) {
-  
-  gene_name_index <- unlist(sig_gene_names) %>% unique() %>% sort()
-  
+  gene_name_index <- unlist(sig_gene_names) %>%
+    unique() %>%
+    sort()
+
 
 
   gene_matrix <- sapply(sig_gene_names, check_against_index, index = gene_name_index)
-  rownames(gene_matrix) <- gene_name_index  
-  
+  rownames(gene_matrix) <- gene_name_index
+
   row_sum <- rowSums(gene_matrix)
-  
-  gene_matrix <- cbind(gene_matrix, total=rowSums(gene_matrix))
-  
-  ordered_matrix <- gene_matrix[order(gene_matrix[,'total'], decreasing = T),]
-  
+
+  gene_matrix <- cbind(gene_matrix, total = rowSums(gene_matrix))
+
+  ordered_matrix <- gene_matrix[order(gene_matrix[, "total"], decreasing = T), ]
+
   DT::datatable(ordered_matrix)
-  
 }
 #' filters table so only contrasted samples remain
 #'
@@ -108,16 +110,16 @@ create_overlap_matrix <- function(sig_gene_names) {
 #' @return matrix of epxression values
 #' @export
 filter_split_table <- function(rld, contrast_groups, j_df, reorder_genes = TRUE) {
-  expression_values <- as.data.frame(SummarizedExperiment::assay(rld)[j_df$gene,rld$condition %in% contrast_groups, drop = F])
+  expression_values <- as.data.frame(SummarizedExperiment::assay(rld)[j_df$gene, rld$condition %in% contrast_groups, drop = F])
   rownames(expression_values) <- j_df$gname
   if (reorder_genes) {
-    expression_values <- expression_values[order(abs(j_df$logFoldChange)),]
+    expression_values <- expression_values[order(abs(j_df$logFoldChange)), ]
   }
   expression_values
 }
 
 #' Save pheatmapplot to svg  file
-#' 
+#'
 #' @param x plot object to save
 #' @param filename name where to save file
 #' @param width plotwidth
@@ -125,15 +127,15 @@ filter_split_table <- function(rld, contrast_groups, j_df, reorder_genes = TRUE)
 #' @return nothing
 #' @importFrom grDevices dev.off svg
 #' @export
-save_pheatmap_svg <- function(x, filename,width = 7 , height = 7 ) {
+save_pheatmap_svg <- function(x, filename, width = 7, height = 7) {
   svglite::svglite(filename, width = width, height = height)
   grid::grid.newpage()
   grid::grid.draw(x$gtable)
   dev.off()
-} 
+}
 
 #' Save any plot to svg  file
-#' 
+#'
 #' @param x plot object to save
 #' @param filename name where to save file
 #' @param width plotwidth
@@ -141,14 +143,14 @@ save_pheatmap_svg <- function(x, filename,width = 7 , height = 7 ) {
 #' @return nothing
 #' @importFrom grDevices dev.off svg
 #' @export
-save_plot_svg <- function(x, filename, width = 7 , height = 7 ) {
+save_plot_svg <- function(x, filename, width = 7, height = 7) {
   svglite::svglite(filename, width = width, height = height)
-  x 
+  x
   dev.off()
 }
 
 #' Save pheatmapplot to svg  file
-#' 
+#'
 #' @param x plot object to save
 #' @param filename name where to save file
 #' @param width plotwidth
@@ -157,8 +159,8 @@ save_plot_svg <- function(x, filename, width = 7 , height = 7 ) {
 #' @importFrom grDevices dev.off svg
 #' @import svglite
 #' @export
-save_cheatmap_svg <- function(x, filename, width = 7 , height = 7 ) {
-    svglite::svglite(filename, width = width, height = height)
+save_cheatmap_svg <- function(x, filename, width = 7, height = 7) {
+  svglite::svglite(filename, width = width, height = height)
   ComplexHeatmap::draw(x)
   dev.off()
 }

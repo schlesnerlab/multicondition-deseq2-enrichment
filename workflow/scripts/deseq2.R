@@ -21,7 +21,7 @@ resstat <- res$stat
 res <- lfcShrink(dds, contrast = contrast, res = res, type = "ashr")
 # sort by p-value
 res$stat <- resstat
-res <- res[,c(
+res <- res[, c(
   "baseMean",
   "log2FoldChange",
   "lfcSE", "stat",

@@ -1,6 +1,6 @@
 log <- file(snakemake@log[[1]], open = "wt")
 sink(log)
-sink(log, type="message")
+sink(log, type = "message")
 
 library("DESeq2")
 
@@ -8,7 +8,7 @@ library("DESeq2")
 dds <- readRDS(snakemake@input[[1]])
 
 # obtain normalized counts
-counts <- rlog(dds, blind=FALSE)
+counts <- rlog(dds, blind = FALSE)
 svg(snakemake@output[[1]])
-plotPCA(counts, intgroup=snakemake @ params[["pca_labels"]])
+plotPCA(counts, intgroup = snakemake @ params[["pca_labels"]])
 dev.off()

@@ -37,14 +37,13 @@ if (exists("snakemake")) {
   organism <- snakemake@config[["organism"]]
 } else {
   the_yaml <- yaml::read_yaml("../../configs/VascAge_Apelin_config.yaml")
-
-  BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/apelin_exp"
+  BASE_ANALYSIS_DIR <- ""
   cond_id <- "condition"
   comp_id <- "AECplusA-vs-AEC"
-  dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), 'deseq2/all.rds')
+  dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/all.rds")
   diffexp_tb_path <- file.path(BASE_ANALYSIS_DIR, 
                                glue::glue("results/diffexp/{comp_id}.diffexp.tsv"))
-  fpkm_path <- file.path(BASE_ANALYSIS_DIR, 'fpkm/all.tsv')
+  fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
   contrast_groups <- c("AECplusA", "AEC")
   plot_path <- "."
   register(SerialParam())

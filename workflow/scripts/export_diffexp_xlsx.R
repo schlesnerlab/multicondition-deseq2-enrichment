@@ -31,8 +31,8 @@ if (exists("snakemake")) {
   contrast_names <- test_config$diffexp$contrasts$condition
   diffexp_tb_path <- as.list(file.path(
     BASE_ANALYSIS_DIR,
-    glue::glue("results/diffexp/condition/{names(contrast_groups)}.diffexp.tsv"
-  )))
+    glue::glue("results/diffexp/condition/{names(contrast_groups)}.diffexp.tsv")
+  ))
 
   names(diffexp_tb_path) <- names(contrast_groups)
   lfc_threshold <- 1

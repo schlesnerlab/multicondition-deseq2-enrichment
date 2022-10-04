@@ -212,7 +212,7 @@ process_carnival <- function(carnival_res) {
 
 #' get organism ID used in omnipath for Mus musculus or Homo sapiens
 #'
-#' @param organism_name Name of organism (Mus musculus, Homo sapiens) 
+#' @param organism_name Name of organism (Mus musculus, Homo sapiens)
 #'
 #' @return
 #' @export
@@ -231,7 +231,7 @@ get_organism_omnipath_id <- function(organism_name) {
 
 #' get organism name used in omnipath for Mus musculus or Homo sapiens
 #'
-#' @param organism_name Name of organism (Mus musculus, Homo sapiens) 
+#' @param organism_name Name of organism (Mus musculus, Homo sapiens)
 #'
 #' @return
 #' @export
@@ -247,5 +247,3 @@ get_organism_omnipath_name <- function(organism_name) {
   }
   org_num
 }
-
-
