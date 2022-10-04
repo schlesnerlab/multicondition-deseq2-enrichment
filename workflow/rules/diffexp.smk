@@ -246,7 +246,7 @@ rule export_diffexp_xlsx:
         ),
     params:
         samp_map=config["samples"],
-        contrast_groups=get_all_contrasts
+        contrast_groups=get_all_contrasts,
     conda:
         "../envs/R_4.yaml"
     resources:
