@@ -48,9 +48,9 @@ if (exists("snakemake")) {
   outpath <- snakemake@output[[1]]
   organism <- snakemake@config[["organism"]]
 } else {
-  BASE_ANALYSIS_DIR = '/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/apelin_exp'
+  BASE_ANALYSIS_DIR = '/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/cre_2022'
   cond_id <- "condition"
-  the_yaml <- file.path("../../configs/VascAge_Apelin_config.yaml")
+  the_yaml <- file.path("../../../configs/VascAge_cre_config.yaml")
   yaml_me <- yaml::read_yaml(the_yaml)
   carnival_paths <- file.path(BASE_ANALYSIS_DIR, "results/inversecarnival/condition",  
                               paste0(names(yaml_me$diffexp$contrasts$condition), "_carnival_res.RDS.gz"))
@@ -447,7 +447,7 @@ if (all(c(contrast_names) %in% names(interactions))) {
 #create_overlap_matrix(node_list)
   combination_gene_sets <- build_comb_gene_set(comb_mat, comb_mat_order = comb_mat_order)
 
-  nodes_carnival = extractCARNIVALnodes(carnival_sample_resolution$`YECplusA-vs-YEC`)
+  nodes_carnival = extractCARNIVALnodes(carnival_sample_resolution[[1]])
 
 
 #  genelist <- combination_gene_sets$`young + old`$gene_names

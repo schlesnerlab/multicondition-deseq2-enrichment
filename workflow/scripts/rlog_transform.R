@@ -57,28 +57,28 @@ while (class(mart)[[1]] != "Mart") {
 # df <- read.table(snakemake@input"]], sep='\t', header=1)
 gene_name_type <- snakemake@config[["gene_name_type"]]
 if (gene_name_type == "ENSEMBL") {
-  g2g <- biomaRt::getBM(
-    attributes = c(
-      "ensembl_gene_id",
-      "external_gene_name"
-    ),
-    filters = "ensembl_gene_id",
-    values = stringr::str_extract(norm_counts$gene,
-      pattern = "^ENS[A-Z0-9]*"
-    ),
-    mart = mart,
-  )
-  colnames(g2g) <- c("gene", "gname")
-
-  annotated <- dplyr::left_join(norm_counts, g2g)
-  annotated$gname <- ifelse(annotated$gname == "" | is.na(annotated$gname),
-    annotated$gene, annotated$gname
-  )
+	g2g <- biomaRt::getBM(
+            attributes = c( "ensembl_gene_id",
+                            "external_gene_name"),
+            filters = "ensembl_gene_id",
+            values = stringr::str_extract(norm_counts$gene,
+                                          pattern = "^ENS[A-Z0-9]*"),
+            mart = mart,
+            )
+    colnames(g2g) <- c("gene", "gname")
+    norm_counts$short_gene_names <- stringr::str_extract(norm_counts$gene,
+                                                         pattern = "^ENS[A-Z0-9]*")
+    annotated <- dplyr::left_join(norm_counts, g2g, by = c("short_gene_names" = "gene"))  %>%
+      dplyr::select(-short_gene_names)
+    annotated$gname <- ifelse(annotated$gname == '' | is.na(annotated$gname), 
+           annotated$gene, annotated$gname)
 } else if (gene_name_type == "ENTREZ_ID") {
   stop("to be implemented")
 } else if (gene_name_type == "HGNC") {
-  annotated <- norm_counts
-  annotated$gname <- annotated$gene
+    annotated <- norm_counts
+    annotated$gname <- annotated$gene
+} else {
+  stop("non valid gene name type")
 }
 # annotated$gene <- ifelse(annotated$external_gene_name == '', annotated$gene, annotated$external_gene_name)
 annotated$gene <- og_gene_names

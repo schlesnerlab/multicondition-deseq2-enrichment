@@ -36,8 +36,9 @@ if (exists("snakemake")) {
   color_scheme <- snakemake@config[["group_colors"]][[cond_id]]
   organism <- snakemake@config[["organism"]]
 } else {
-  the_yaml <- yaml::read_yaml("../../configs/VascAge_Apelin_config.yaml")
-  BASE_ANALYSIS_DIR <- ""
+  the_yaml <- yaml::read_yaml("../../../config/workflow_unit_test.yaml")
+
+  BASE_ANALYSIS_DIR = '../../../data/test_workflow'
   cond_id <- "condition"
   comp_id <- "AECplusA-vs-AEC"
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/all.rds")
@@ -260,7 +261,7 @@ ComplexHeatmap::Heatmap(sample_acts_mat,
 as_tibble(sample_acts_mat)  -> out_yeet
 
 yeet<- apply(sample_acts_mat, 1, kruskal.test, g = as.factor(ann_col))
-
+  
 kruskal_test <- purrr::map_df(yeet, tidy,.id = "pathway") %>% mutate(padj = p.adjust(p.value, method = "BH")) %>% arrange(desc(statistic))
 plot_activity <- sample_acts_mat %>% t()  %>% as.data.frame()
 plot_activity[,cond_id] <- ann_col

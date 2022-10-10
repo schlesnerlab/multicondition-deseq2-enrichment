@@ -45,7 +45,8 @@ if (exists("snakemake")) {
   mem_mb <- snakemake@resources[["mem_mb"]]
   time_limit <- (snakemake@resources[["time_min"]] - 20) * 60
   run_vanilla <- snakemake@params[["run_vanilla"]]
-  progeny_data <- "./workflow/data/progenyMembers.RData"
+  perturbation_gene <- snakemake@params[["perturbation_gene"]]
+  progeny_data <- "../data/progenyMembers.RData"
 } else {
   BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/APLN_KO"
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/all.rds")
@@ -59,7 +60,7 @@ if (exists("snakemake")) {
   register(SerialParam())
   s_groups <- c("AplnKO", "basal")
   contrast_name <- glue::glue("{contrast_groups[[1]]} vs {contrast_groups[[2]]}")
-  the_yaml <- yaml::read_yaml("./configs/VascAge_APLN_KO.yaml")
+  the_yaml <- yaml::read_yaml("../configs/VascAge_APLN_KO.yaml")
   comp_groups <- the_yaml$comp_groups
   color_scheme <- the_yaml$group_colors
   carnival_output <- "./test_output.RDS.gz"
@@ -119,7 +120,8 @@ PathwayActivity <- PathwayActivity_CARNIVALinput <- run_wmean(
   dplyr::filter(statistic == "wmean") %>%
   as.data.frame()
 if (any(abs(PathwayActivity$score) > 1)) {
-  stop("Progeny values exceeding abs(1)!!")
+  PathwayActivity$score <- sign(PathwayActivity$score) * (1 - PathwayActivity$p_value)
+  warning("decoupler based enriched failed, falling back on (1-pvalue) * sign(score)")
 }
 # PathwayActivity <- PathwayActivity_CARNIVALinput <- progeny(diffexp_matrix,
 #  scale = TRUE, organism = "Mouse", top = 100, perm = 10000, z_scores = F
@@ -238,7 +240,7 @@ dir.create(file.path(temp_path, "carnout"), recursive = T, showWarnings = F)
 # setwd(file.path(temp_path, "carnout"))
 if (run_vanilla) {
   carnival_result <- runVanillaCarnival(
-    perturbations = c("Aplnr" = -1),
+    perturbations = c(perturbation_gene = 1),
     measurements = unlist(tf_vec),
     priorKnowledgeNetwork = sif,
     weights = unlist(progeny_vec),

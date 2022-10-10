@@ -12,7 +12,7 @@ if (exists("snakemake")) {
   outpath <- snakemake@output[["sample_progeny_table"]]
   threads <- snakemake@threads
 } else {
-  BASE_PATH <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/APLN_KO"
+  BASE_PATH <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/cre_2022"
   dds_obj_rlog <- file.path(BASE_PATH, "deseq2/rlog_transform.RDS.gz")
   fpkm_path <- file.path(BASE_PATH, "fpkm/all.tsv")
   threads <- 1
@@ -27,6 +27,7 @@ count_df_rlog <- readRDS(dds_obj_rlog) %>%
 fpkm <- read_tsv(fpkm_path)
 
 # Rename rownames
+print(rownames(count_df_rlog))
 count_df_rlog <- rename_count_rownames(
   count_table = count_df_rlog,
   fpkm_table = fpkm

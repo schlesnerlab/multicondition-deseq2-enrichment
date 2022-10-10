@@ -12,7 +12,7 @@ rule count_matrix:
         ),
     output:
         join(BASE_ANALYSIS_DIR, "counts/all.tsv"),
-        join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
+        #join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
     params:
         samples=samples["sample"].tolist(),
         strand=get_strandness(samples),
