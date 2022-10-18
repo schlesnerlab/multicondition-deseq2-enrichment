@@ -60,7 +60,7 @@ if config["run_carnival"]["vanilla"]:
         )
 if config["run_carnival"]["inverse"]:
     if config["run_carnival"]["joint_rep"]:
-    	for cond in CONTRASTS:
+        for cond in CONTRASTS:
             salmon_files.extend(
                 expand(
                     join(

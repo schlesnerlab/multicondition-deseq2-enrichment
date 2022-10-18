@@ -85,7 +85,7 @@ def get_count_matrix(wildcards):
     if "counts" in config:
         count_file = config["counts"]
     else:
-        count_file =  join(BASE_ANALYSIS_DIR, "counts/all.tsv")
+        count_file = join(BASE_ANALYSIS_DIR, "counts/all.tsv")
     return count_file
 
 

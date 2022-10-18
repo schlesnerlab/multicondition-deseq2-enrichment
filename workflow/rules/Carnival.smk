@@ -1,5 +1,6 @@
 ## Snakefile containg rules for CARNIVAL analysis
 
+
 rule run_carnival_vanilla:
     input:
         dds_obj=join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
@@ -18,7 +19,7 @@ rule run_carnival_vanilla:
             join(BASE_ANALYSIS_DIR, "results/carnival/temp/{condition}/{contrast}/")
         ),
         run_vanilla=True,
-        perturbation_gene=config["run_carnival"]["vanilla"]
+        perturbation_gene=config["run_carnival"]["vanilla"],
     conda:
         "../envs/carnival.yaml"
     threads: 12
