@@ -38,7 +38,7 @@ dirs:
 pca:
   labels:
     # columns of sample sheet to use for PCA
-    - condition
+    - cond
 
 diffexp:
   pval_threshold: 0.05 
@@ -50,7 +50,7 @@ diffexp:
       Del_8_17_homo_vs_wt: # comparison
         - Del_8_17_homo
         - WT
-  model: "~condition"
+  model: "~cond"
       
 ## Color control
 group_colors:
