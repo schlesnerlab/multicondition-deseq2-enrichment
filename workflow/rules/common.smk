@@ -152,5 +152,5 @@ def get_mem_mb(wildcards, attempt):
 def get_sample(wildcards):
     return samples.loc[wildcards.sample]["sample"]
 
-def get_all_condition(wildcards):
+def get_all_conditions(wildcards):
     return samples.loc[:, wildcards.condition].unique()
