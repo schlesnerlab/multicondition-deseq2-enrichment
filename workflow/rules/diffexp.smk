@@ -265,7 +265,7 @@ rule run_dorothea_diffexp:
             BASE_ANALYSIS_DIR, "dorothea/{condition}/{contrast}_dorothea.html"
         ),
     params:
-        s_groups=samples.condition.unique(),
+        s_groups=get_all_conditions
         plot_path=join(BASE_ANALYSIS_DIR, "dorothea/svg_{condition}/{contrast}"),
     conda:
         "../envs/R_4.yaml"
