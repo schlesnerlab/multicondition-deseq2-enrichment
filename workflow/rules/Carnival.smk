@@ -14,7 +14,7 @@ rule run_carnival_vanilla:
             "results/carnival/{condition}/{contrast}_carnival_res.RDS.gz",
         ),
     params:
-        s_groups=get_all_conditions
+        s_groups=get_all_conditions,
         temp_path=temp(
             join(BASE_ANALYSIS_DIR, "results/carnival/temp/{condition}/{contrast}/")
         ),
