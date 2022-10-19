@@ -46,7 +46,7 @@ diffexp:
   shrink_lfc: True
     # contrasts for the deseq2 results method
   contrasts:
-    condition: # Here column in sample sheet 
+    cond: # Here column in sample sheet 
       Del_8_17_homo_vs_wt: # comparison
         - Del_8_17_homo
         - WT
@@ -54,7 +54,7 @@ diffexp:
       
 ## Color control
 group_colors:
-  condition:
+  cond:
     Del_8_17_homo: "red"
     WT: "blue"
 
