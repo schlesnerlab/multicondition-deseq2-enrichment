@@ -9,9 +9,6 @@ process_carnival(carnival_res)
 \arguments{
 \item{carnival_res}{Carnival Results object}
 }
-\value{
-
-}
 \description{
 Parse and change variable types for carnival
 }

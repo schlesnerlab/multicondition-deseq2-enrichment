@@ -13,9 +13,6 @@ convertHumanGeneList(x, hmart, mmart)
 
 \item{mmart}{mouse biomart}
 }
-\value{
-
-}
 \description{
 Convert Human gene list
 }

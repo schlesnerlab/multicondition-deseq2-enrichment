@@ -3,18 +3,20 @@
 #'
 #' @param gene_names vecotr of gene symbols to be converted
 #' @param input_type String denoting the type of input given based on \link[org.Mm.eg.db]{org.Mm.eg.db}
+#' @param org_db org db package for the organism analyzed during workflow. 
 #' @return table of gene names to entrezgene ids
 #' @export
 #' @examples
-#' get_entrezgenes_from_ensembl(c("Aplnr"))
-get_entrezgenes_from_ensembl <- function(gene_names, input_type = "SYMBOL") {
+#' get_entrezgenes_from_ensembl(c("Aplnr"), org_db = org.Mm.eg.db::org.Mm.eg.db)
+get_entrezgenes_from_ensembl <- function(gene_names, input_type = "SYMBOL",
+                                          org_db) {
   if (input_type == "ENSEMBL") {
     gene_names <- stringr::str_extract(string = gene_names, "^ENS[A-Z0-9]*")
   }
 
   ensembl_to_eg <- clusterProfiler::bitr(gene_names,
     fromType = input_type, toType = "ENTREZID",
-    OrgDb = "org.Mm.eg.db"
+    OrgDb = org_db
   )
   return(ensembl_to_eg)
 }
@@ -180,10 +182,11 @@ run_msig_enricher <- function(gset_list, category = NULL, species = "Mus musculu
 #' @param DE_tb Data.frame like object of col 1 gene symbols, col2 LFC values
 #' @param input_type String denoting the type of input given based on \link[org.Mm.eg.db]{org.Mm.eg.db}
 #' @param p_valcut Cutoff passed to gseKEGG
+#' @param species Name of species analyzed in workflow 
 #' @return \link[clusterProfiler]{gseKEGG}
 #' @importFrom magrittr %>%
 #' @export
-run_gsea <- function(DE_tb, input_type, p_valcut = 0.05) {
+run_gsea <- function(DE_tb, input_type, p_valcut = 0.05, species) {
   DE_tb <- as.data.frame(DE_tb)
   if (input_type == "ENSEMBL") {
     DE_tb[, 1] <- stringr::str_extract(string = DE_tb[, 1], "^ENS[A-Z0-9]*")
@@ -195,19 +198,20 @@ run_gsea <- function(DE_tb, input_type, p_valcut = 0.05) {
 
   gene_ranks <- stats::setNames(DE_tb[, 2], nm = eg$ENTREZID) %>% sort(decreasing = T)
 
-  fgsea_results <- clusterProfiler::gseKEGG(gene_ranks, organism = "mmu", pvalueCutoff = p_valcut, eps = 0)
+  kegg_species <- get_kegg_name(species) 
+  fgsea_results <- clusterProfiler::gseKEGG(gene_ranks, organism = kegg_species, pvalueCutoff = p_valcut, eps = 0)
 
   return(fgsea_results)
 }
 #' Function to create Reactome DB for gene centric analysis
 #'
 #' @export
-#' @importFrom org.Mm.eg.db org.Mm.eg.db
 #' @param output_type Type of gene ID to be used as output. Needs to be compatible
+#' @param species Name of species being analyzed
 #' with org.Mm.eg.db keys
-buildReactome <- function(output_type = "ENSEMBL") {
+buildReactome <- function(output_type = "ENSEMBL", species) {
   # Get Human gene annotations
-  mm <- org.Mm.eg.db::org.Mm.eg.db
+  mm <- get_org_db(species)
 
   # Get Reactome IDs and names
   reac <- as.list(reactome.db::reactomePATHID2EXTID)
@@ -294,7 +298,26 @@ get_org_db <- function(org_name) {
   } else if (org_name == "Homo sapiens") {
     org_db <- org.Hs.eg.db::org.Hs.eg.db
   } else {
-    stop("Species not supported. Pleasue choose Mus musculus or Homosapiens")
+    stop("Species not supported. Pleasue choose Mus musculus or Homo sapiens")
   }
   org_db
+}
+
+#' Return the correct kegg name
+#'
+#' @param org_name Name of organism used in analysis
+#'
+#' @return
+#' @export
+#'
+#' @examples NULL
+get_kegg_name <- function(org_name) {
+  if (org_name == "Mus musculus") {
+    kegg_name <- "mmu"
+  } else if (org_name == "Homo sapiens") {
+    kegg_name <- "hsa"
+  } else {
+    stop("Species not supported. Pleasue choose Mus musculus or Homo sapiens")
+  }
+  kegg_name
 }

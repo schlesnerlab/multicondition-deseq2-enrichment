@@ -247,3 +247,22 @@ get_organism_omnipath_name <- function(organism_name) {
   }
   org_num
 }
+
+#' get organism name used in ensembl for Mus musculus or Homo sapiens
+#'
+#' @param organism_name Name of organism (Mus musculus, Homo sapiens)
+#'
+#' @return
+#' @export
+#'
+#' @examples NULL
+get_organism_ensembl_name <- function(organism_name) {
+  if (organism_name == "Homo sapiens") {
+    org_name <- "hsapiens"
+  } else if (organism_name == "Mus musculus") {
+    org_name <- "mmusculus"
+  } else {
+    stop("Organism not supported. Please select a supported organism \n Mus musculus or Homo sapiens")
+  }
+  org_name
+}

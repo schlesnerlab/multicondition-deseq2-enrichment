@@ -9,9 +9,6 @@ get_organism_omnipath_name(organism_name)
 \arguments{
 \item{organism_name}{Name of organism (Mus musculus, Homo sapiens)}
 }
-\value{
-
-}
 \description{
 get organism name used in omnipath for Mus musculus or Homo sapiens
 }

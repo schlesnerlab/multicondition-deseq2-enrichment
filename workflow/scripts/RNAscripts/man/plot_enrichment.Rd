@@ -26,9 +26,6 @@ plot_enrichment(
 
 \item{n_max}{Max number of pathways to plot}
 }
-\value{
-
-}
 \description{
 Plot Enrichment Barplot
 }

@@ -11,9 +11,6 @@ rename_count_rownames(count_table, fpkm_table)
 
 \item{fpkm_table}{FPKM table from rna-star-deseq pipeline `fpkm/all.tsv`}
 }
-\value{
-
-}
 \description{
 rename ENSG IDS from OTP using fpkm table
 }

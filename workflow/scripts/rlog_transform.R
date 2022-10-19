@@ -20,7 +20,7 @@ norm_counts$gene <- stringr::str_extract(norm_counts$gene,
 # of very frequent "Internal Server Error"s)
 mart <- "useast"
 rounds <- 0
-species <- "mmusculus"
+species <- RNAscripts::get_organism_ensembl_name(snakemake@config[["organism"]])
 while (class(mart)[[1]] != "Mart") {
   mart <- tryCatch(
     {

@@ -20,9 +20,6 @@ assignPROGENyScores(
 
 \item{access_idx}{Score Access ID}
 }
-\value{
-
-}
 \description{
 assigny progeny scores to genes via OmnipathR
 }

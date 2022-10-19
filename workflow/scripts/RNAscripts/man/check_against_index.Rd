@@ -11,9 +11,6 @@ check_against_index(info, index)
 
 \item{index}{index that is to be checked}
 }
-\value{
-
-}
 \description{
 test
 }
