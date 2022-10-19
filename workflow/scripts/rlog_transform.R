@@ -2,7 +2,11 @@ library(tidyverse)
 library(DESeq2)
 deseq_obj <- readRDS(snakemake@input[["dds_obj"]])
 
-rld <- DESeq2::rlog(deseq_obj, blind = FALSE)
+if (ncol(deseq_obj) < 50) {
+  rld <- DESeq2::rlog(deseq_obj, blind = FALSE)
+} else {
+  rld <- DESeq2::vst(deseq_obj, blind = FALSE)
+}
 
 saveRDS(rld, snakemake@output[["rld"]])
 

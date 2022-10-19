@@ -1,4 +1,4 @@
-sample	tissue	condition	sampleNO	fastq
+sample	animal	cond	sampleNO	fastq
 WT-SRR1042885	mouse	WT	SRR1042885	SRR1042885.fastq.gz
 WT-SRR1042886	mouse	WT	SRR1042886	SRR1042886.fastq.gz
 WT-SRR1042887	mouse	WT	SRR1042887	SRR1042887.fastq.gz
