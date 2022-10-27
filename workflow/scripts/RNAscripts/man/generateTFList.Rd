@@ -13,9 +13,6 @@ generateTFList(df = df, top = 50, access_idx = 1)
 
 \item{access_idx}{Col to access}
 }
-\value{
-
-}
 \description{
 Generate TF list from Saezlab Transcript tutorial
 }

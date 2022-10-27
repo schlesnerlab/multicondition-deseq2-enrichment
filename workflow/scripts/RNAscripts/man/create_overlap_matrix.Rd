@@ -15,3 +15,7 @@ DT::datatable of genes across comparison groups
 \description{
 Create dynamic table from significant gene names
 }
+\examples{
+create_overlap_matrix(list("g1" = c("gene1", "gene2", "gene3"), "g2" = c("gene1")))
+
+}

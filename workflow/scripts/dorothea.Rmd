@@ -13,7 +13,7 @@ knitr::opts_chunk$set(
 if (!require(dorothea)) {
   BiocManager::install("dorothea")
 }
-#library(dorothea)
+library(dorothea)
 # library(bcellViper)
 library(dplyr)
 library(viper)
@@ -43,17 +43,22 @@ if (exists("snakemake")) {
   color_scheme <- purrr::map(snakemake@config[["group_colors"]], unlist)
   organism <- snakemake@config[["organism"]]
 } else {
-  BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/apelin_exp_test"
-  comp_id <- "YECplusA-vs-YEC"
-  cond_id <- "condition"
-  contrast_groups <- c("Young-EC_apelin", "Young-EC")
+  config <- yaml::read_yaml("../../config/STAD.yaml")
+  snakedir <- "/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment"
+  BASE_ANALYSIS_DIR <- file.path(snakedir, config$dirs$BASE_ANALYSIS_DIR)
+  comp_id <- names(config$diffexp$contrasts$SARIFA...3)[1]
+  #cond_id <- ""
+  contrast_groups <- config$diffexp$contrasts$SARIFA...3
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/all.rds")
   fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
   samp_map <- "../../data/apelin_2020/VascAge_samples_apelin.tsv"
   plot_path <- "./"
-  the_yaml <- yaml::read_yaml("../../configs/VascAge_Apelin_config.yaml")
-  comp_groups <- the_yaml$comp_groups
-  color_scheme <- purrr::map(the_yaml$group_colors, unlist)
+  #the_yaml <- yaml::read_yaml("../../configs/VascAge_Apelin_config.yaml")
+  comp_groups <- config$comp_groups
+  color_scheme <- purrr::map(config$group_colors, unlist)
+  samp_map <- file.path(snakedir, config$samples)
+  organism <- "Homo sapiens"
+  cond_id <- names(config$diffexp$contrasts)
   }
 if (!dir.exists(plot_path)) {
   dir.create(plot_path)
@@ -89,20 +94,21 @@ expression_matrix <- Normalized_counts
 
 #regulons <- dorothea_mm %>% filter(confidence %in% c("A", "B", "C"))
 sample_overview <- readr::read_tsv(samp_map)
-condition_groups <- unique(sample_overview$condition)
+sample_overview <- sample_overview %>% dplyr::filter(sample %in% colnames(Normalized_counts))
 ```
 
 ## Resulting plots
 
-The first Heatmap shows the Normalized enrichment score for each sample for all transcription factors.
+The first Heatmap shows the Normalized enricment score for each sample for all transcription factors.
 THe condition is given as a colored annotation at the top of the plot. 
 
 ```{r pressure, echo=FALSE}
-net <- get_dorothea(organism = "mouse", levels = c("A", "B", "C"))
+organism_name <- RNAscripts::get_organism_omnipath_name(organism)
+net <- get_dorothea(organism = organism_name, levels = c("A", "B", "C"))
 
-viper_net <- net
-colnames(viper_net) <-colnames(dorothea_mm)
-tf_activities <- decoupleR::run_viper(expression_matrix, net,
+#viper_net <- net
+#colnames(viper_net) <- colnames(dorothea_mm)
+tf_activities <- decoupleR::run_viper(expression_matrix[,], net,
                                       minsize = 4
 )
 tf_activities %>%
@@ -117,18 +123,15 @@ tf_activities %>%
 
 
 plot_doro_hm <- function(dds, cond, color_vec, p_data) {
-  anno_vec <- dds_file@colData %>% as.data.frame()%>% pull(!!cond)
+  anno_vec <- dds@colData[,] %>% as.data.frame()%>% dplyr::select(!!cond)
 
   col_palette <- RColorBrewer::brewer.pal(length(unique(anno_vec)),
     name = "Set1"
   )
 
   ha <- HeatmapAnnotation(
-  group = anno_vec,
-  col = list(
-    group =
-      as_vector(color_vec)
-    )
+  df = anno_vec,
+  col = color_vec[cond]
   )
 
   ch <- Heatmap(p_data,
@@ -140,12 +143,13 @@ plot_doro_hm <- function(dds, cond, color_vec, p_data) {
   row_names_gp = gpar(fontsize = 8),
   column_names_rot = 70
   )
-  save_cheatmap_svg(ch, file.path(plot_path, glue::glue("progeny_heatmap_{cond}.svg")))
+  save_cheatmap_svg(ch, file.path(plot_path, glue::glue("progeny_heatmap.svg")))
 
   ch
 }
 
-purrr::map2(cond_id, color_scheme, plot_doro_hm, dds=dds_file, p_data = tf_activities)
+plot_doro_hm(dds = dds_file, cond_id, color_scheme, tf_activities)
+#purrr::map2(cond_id, color_scheme, plot_doro_hm, dds=dds_file, p_data = tf_activities)
 ```
 
 The following plots show the mean density distribution of the NES for each sample group, followed by a barplot showing the top enrichment for TF activity in each sample group.
@@ -154,13 +158,14 @@ The y axis shows the TF factor, the x axis the NES.
 ```{r, fig.height = 10}
 plot_doro_plots <-  function(tf_activities, dds_file, cond) {
   mean_tf_activities <- mean_tibble_from_mat(tf_activities,
-                                             contrast_groups = colData(dds_file)[, cond],
-                                             s_map = sample_overview)
+                                             contrast_groups = colData(dds_file)[,cond],
+                                             s_map = sample_overview,
+                                             cond_id = cond)
   mean_tf_activities["TF"] <- rownames(tf_activities)
   plot_list <- list()
   for (c_group in unique(sample_overview %>% pull(!!cond))) {
     plot_table <- mean_tf_activities %>%
-      dplyr::select(TF, c_group) %>%
+      dplyr::select(TF, !!sym(c_group)) %>%
       dplyr::arrange(!!sym(c_group))
     histo <- ggplot(plot_table, aes(!!sym(c_group))) +
       geom_density() +
@@ -225,7 +230,7 @@ plot_doro_plots <-  function(tf_activities, dds_file, cond) {
 }
 
 purrr::map(cond_id,plot_doro_plots, 
-           tf_activities = tf_activities,
+           tf_activities = t(scale(t(tf_activities))),
            dds_file = dds_file)
 ```
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
@@ -250,9 +255,10 @@ sample_acts_mat <- sample_acts %>%
 
 
 
-purrr::map2(cond_id, color_scheme, plot_doro_hm, 
-            dds = dds_file, 
-            p_data = t(scale(t(sample_acts_mat), scale = F)))
+
+plot_doro_hm(dds = dds_file, cond =  cond_id,color_vec =color_scheme,
+              p_data =t(scale(t(sample_acts_mat), scale = F)) 
+              )
 ```
 
 

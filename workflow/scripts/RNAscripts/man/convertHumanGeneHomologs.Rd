@@ -11,9 +11,6 @@ convertHumanGeneHomologs(x, jax_database = NULL)
 
 \item{jax_database}{Databse from outside to reduce http calls}
 }
-\value{
-
-}
 \description{
 convert between human and mouse homologs using homolog table
 }

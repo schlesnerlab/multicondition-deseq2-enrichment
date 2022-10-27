@@ -31,16 +31,17 @@ join_tables <- function(DEseq_tb, fpkm) {
 #' @param extra_col Extra column that should be extracted and added
 #' @param contrast_groups contrast_groups
 #' @param s_map Sample map of samples
+#' @param cond_id condition ID to setup by
 #' @export
 #' @return tibble with mean values, gene names and padj values
 #' @importFrom magrittr %>%
-mean_tibble_from_mat <- function(mat, extra_col = NULL, contrast_groups = contrast_groups, s_map) {
+mean_tibble_from_mat <- function(mat, extra_col = NULL, contrast_groups = contrast_groups, s_map,cond_id) {
   mat_tb <- tibble::as_tibble(mat)
 
   mean_tb <- tibble::tibble(.rows = nrow(mat_tb))
   for (gr in contrast_groups) {
     col_n <- s_map %>%
-      dplyr::filter(condition == gr) %>%
+      dplyr::filter(!!sym(cond_id) == gr) %>%
       dplyr::pull(sample)
     mean_tb[[gr]] <- rowMeans(dplyr::select(mat_tb, col_n))
   }
@@ -107,10 +108,12 @@ create_overlap_matrix <- function(sig_gene_names) {
 #' @param contrast_groups character vecctor of contrast groups being analyzed.
 #' @param j_df joined tibble of deseq + fpkm values to match genes and gnames
 #' @param reorder_genes whether the order of genes should be orded by logfolgchange
+#' @param cond_id condition variable set in snakeamek
 #' @return matrix of epxression values
 #' @export
-filter_split_table <- function(rld, contrast_groups, j_df, reorder_genes = TRUE) {
-  expression_values <- as.data.frame(SummarizedExperiment::assay(rld)[j_df$gene, rld$condition %in% contrast_groups, drop = F])
+filter_split_table <- function(rld, contrast_groups, j_df, reorder_genes = TRUE, 
+                               cond_id) {
+  expression_values <- as.data.frame(SummarizedExperiment::assay(rld)[j_df$gene, rld@colData[, cond_id] %in% contrast_groups, drop = F])
   rownames(expression_values) <- j_df$gname
   if (reorder_genes) {
     expression_values <- expression_values[order(abs(j_df$logFoldChange)), ]

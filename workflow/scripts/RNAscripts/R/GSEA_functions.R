@@ -3,18 +3,20 @@
 #'
 #' @param gene_names vecotr of gene symbols to be converted
 #' @param input_type String denoting the type of input given based on \link[org.Mm.eg.db]{org.Mm.eg.db}
+#' @param org_db org db package for the organism analyzed during workflow. 
 #' @return table of gene names to entrezgene ids
 #' @export
 #' @examples
-#' get_entrezgenes_from_ensembl(c("Aplnr"))
-get_entrezgenes_from_ensembl <- function(gene_names, input_type = "SYMBOL") {
+#' get_entrezgenes_from_ensembl(c("Aplnr"), org_db = org.Mm.eg.db::org.Mm.eg.db)
+get_entrezgenes_from_ensembl <- function(gene_names, input_type = "SYMBOL",
+                                          org_db) {
   if (input_type == "ENSEMBL") {
     gene_names <- stringr::str_extract(string = gene_names, "^ENS[A-Z0-9]*")
   }
 
   ensembl_to_eg <- clusterProfiler::bitr(gene_names,
     fromType = input_type, toType = "ENTREZID",
-    OrgDb = "org.Mm.eg.db"
+    OrgDb = org_db
   )
   return(ensembl_to_eg)
 }
@@ -23,16 +25,17 @@ get_entrezgenes_from_ensembl <- function(gene_names, input_type = "SYMBOL") {
 #'
 #' @param gene_tb data.frame like object with first col gene names and second col LFC values
 #' @param input_type String denoting the type of input given based on \link[org.Mm.eg.db]{org.Mm.eg.db}
+#' @param org_db org db package for the organism analyzed during workflow. 
 #' @return a named vector of column 2 with names from column 1
 #'
 #' @importFrom magrittr %>%
 #' @export
-get_entrezgene_vector <- function(gene_tb, input_type = "SYMBOL") {
+get_entrezgene_vector <- function(gene_tb, input_type = "SYMBOL", org_db) {
   gene_tb <- as.data.frame(gene_tb)
   if (input_type == "ENSEMBL") {
     gene_tb[, 1] <- stringr::str_extract(string = gene_tb[, 1], "^ENS[A-Z0-9]*")
   }
-  eg <- get_entrezgenes_from_ensembl(gene_tb[, 1], input_type)
+  eg <- get_entrezgenes_from_ensembl(gene_tb[, 1], input_type, org_db = org_db)
   rownames(gene_tb) <- gene_tb[, 1]
   gene_tb <- gene_tb[eg[, 1], ]
   # gene_tb <- gene_tb %>%  dplyr::filter(gene_tb[,1] %in% eg[,c(input_type)])
@@ -180,34 +183,38 @@ run_msig_enricher <- function(gset_list, category = NULL, species = "Mus musculu
 #' @param DE_tb Data.frame like object of col 1 gene symbols, col2 LFC values
 #' @param input_type String denoting the type of input given based on \link[org.Mm.eg.db]{org.Mm.eg.db}
 #' @param p_valcut Cutoff passed to gseKEGG
+#' @param species Name of species analyzed in workflow 
 #' @return \link[clusterProfiler]{gseKEGG}
 #' @importFrom magrittr %>%
 #' @export
-run_gsea <- function(DE_tb, input_type, p_valcut = 0.05) {
+run_gsea <- function(DE_tb, input_type, p_valcut = 0.05, species) {
   DE_tb <- as.data.frame(DE_tb)
   if (input_type == "ENSEMBL") {
     DE_tb[, 1] <- stringr::str_extract(string = DE_tb[, 1], "^ENS[A-Z0-9]*")
   }
-  eg <- get_entrezgenes_from_ensembl(DE_tb[, 1], input_type = input_type)
+  org_db <- RNAscripts::get_org_db(species)
+  eg <- get_entrezgenes_from_ensembl(DE_tb[, 1], input_type = input_type,
+                                     org_db = org_db)
   rownames(DE_tb) <- DE_tb[, 1]
   DE_tb <- DE_tb[eg[, 1], ]
   # DE_tb <- DE_tb %>% dplyr::filter(DE_tb[,1] %in% eg[,1])
 
   gene_ranks <- stats::setNames(DE_tb[, 2], nm = eg$ENTREZID) %>% sort(decreasing = T)
 
-  fgsea_results <- clusterProfiler::gseKEGG(gene_ranks, organism = "mmu", pvalueCutoff = p_valcut, eps = 0)
+  kegg_species <- get_kegg_name(species) 
+  fgsea_results <- clusterProfiler::gseKEGG(gene_ranks, organism = kegg_species, pvalueCutoff = p_valcut, eps = 0)
 
   return(fgsea_results)
 }
 #' Function to create Reactome DB for gene centric analysis
 #'
 #' @export
-#' @importFrom org.Mm.eg.db org.Mm.eg.db
 #' @param output_type Type of gene ID to be used as output. Needs to be compatible
+#' @param species Name of species being analyzed
 #' with org.Mm.eg.db keys
-buildReactome <- function(output_type = "ENSEMBL") {
+buildReactome <- function(output_type = "ENSEMBL", species) {
   # Get Human gene annotations
-  mm <- org.Mm.eg.db::org.Mm.eg.db
+  mm <- get_org_db(species)
 
   # Get Reactome IDs and names
   reac <- as.list(reactome.db::reactomePATHID2EXTID)
@@ -260,6 +267,7 @@ buildReactome <- function(output_type = "ENSEMBL") {
 #' NULL
 plot_enrichment <- function(GSEA_table, X, Y, pval = "pval", pval_threshold = 0.1,
                             n_max = 20) {
+  GSEA_table <- GSEA_table %>% dplyr::filter(!duplicated(!!sym(X)))
   GSEA_tb <- tibble::as_tibble(GSEA_table) %>%
     dplyr::arrange(dplyr::desc(!!as.name(Y))) %>%
     dplyr::filter(abs(!!as.name(pval)) < pval_threshold) %>%
@@ -294,7 +302,26 @@ get_org_db <- function(org_name) {
   } else if (org_name == "Homo sapiens") {
     org_db <- org.Hs.eg.db::org.Hs.eg.db
   } else {
-    stop("Species not supported. Pleasue choose Mus musculus or Homosapiens")
+    stop("Species not supported. Pleasue choose Mus musculus or Homo sapiens")
   }
   org_db
+}
+
+#' Return the correct kegg name
+#'
+#' @param org_name Name of organism used in analysis
+#'
+#' @return
+#' @export
+#'
+#' @examples NULL
+get_kegg_name <- function(org_name) {
+  if (org_name == "Mus musculus") {
+    kegg_name <- "mmu"
+  } else if (org_name == "Homo sapiens") {
+    kegg_name <- "hsa"
+  } else {
+    stop("Species not supported. Pleasue choose Mus musculus or Homo sapiens")
+  }
+  kegg_name
 }

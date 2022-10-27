@@ -12,15 +12,20 @@ if (snakemake@threads > 1) {
 }
 if (!exists("snakemake")) {
   library(magrittr)
-  BASE_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/apelin_exp"
-  cts <- file.path(BASE_DIR, "counts/all.tsv") %>%
+  BASE_DIR <- "/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment/data"
+  cts <- file.path(BASE_DIR, "STAD_counts.tsv") %>%
     read.table(header = T, row.names = "gene", check.names = F)
-  coldata <- read.table("../data/apelin_2020/VascAge_samples_apelin.tsv",
+  coldata <- read.table("../../data/STAD_metadata.tsv",
     header = TRUE,
     row.names = "sample",
     check.names = FALSE
   )
+  snakemake_conf <- yaml::read_yaml("../../config/STAD.yaml")
+  all_conditions <- names(snakemake_conf$diffexp$contrasts)
 }
+
+all_conditions <- names(snakemake@config$diffexp$contrasts)
+
 # colData and countData must have the same sample order, but this is ensured
 # by the way we create the count matrix
 cts <- read.table(snakemake@input[["counts"]],
@@ -40,11 +45,17 @@ if (!all(colnames(cts) == rownames(coldata))) {
   sample_ids <- colnames(cts)
   coldata <- coldata[sample_ids, ]
 }
+# Remove NAs from Data (not supported)
+if (any(is.na(coldata[, c(all_conditions)]))) {
+  na_index <- apply(coldata, 1, function(x) {any(is.na(x))})
+  coldata <- coldata[!na_index,]
+  cts <- cts[, rownames(coldata)]
+}
 
 dds <- DESeqDataSetFromMatrix(
   countData = cts,
   colData = coldata,
-  # design = as.formula("~condition"))
+  #design = as.formula("~SARIFA_red + paper_Lauren.Class"))
   design = as.formula(snakemake@params[["model"]]),
 )
 

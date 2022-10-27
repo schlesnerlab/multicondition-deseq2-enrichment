@@ -52,12 +52,12 @@ col_name <- c("gene", "gname")
 
 print("read fpkm table")
 fpkm <- readr::read_tsv(fpkm_path)
-
+sample_overview <- sample_overview %>% dplyr::filter(sample %in% colnames(fpkm))
 build_output_table <- function(diff_exp_table, c_group, fpkm, col_name) {
   print(c_group)
   print(col_name)
   relevant_samples <- sample_overview %>%
-    dplyr::filter(condition %in% c_group) %>%
+    dplyr::filter(!!sym(cond_id) %in% c_group) %>%
     pull(sample)
   print(relevant_samples)
   deseq2_table <- readr::read_tsv(diff_exp_table,
@@ -78,8 +78,7 @@ build_output_table <- function(diff_exp_table, c_group, fpkm, col_name) {
     dplyr::select(col_name, relevant_samples)
   colnames(fpkm_data)[-c(1:2)] <- sample_overview %>%
     dplyr::filter(sample %in% colnames(fpkm_data)[-c(1:2)]) %>%
-    unite("sample_id", sample:tissue) %>%
-    pull(sample_id)
+    pull(sample)
 
   print(names(fpkm_data))
   print(names(deseq2_table))

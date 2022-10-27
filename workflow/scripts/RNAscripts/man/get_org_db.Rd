@@ -9,9 +9,6 @@ get_org_db(org_name)
 \arguments{
 \item{org_name}{Name of organism used in analysis}
 }
-\value{
-
-}
 \description{
 Return the correct org_db
 }

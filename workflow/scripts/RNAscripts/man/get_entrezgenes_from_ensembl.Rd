@@ -4,12 +4,14 @@
 \alias{get_entrezgenes_from_ensembl}
 \title{Get entrezgenenames from ensembl}
 \usage{
-get_entrezgenes_from_ensembl(gene_names, input_type = "SYMBOL")
+get_entrezgenes_from_ensembl(gene_names, input_type = "SYMBOL", org_db)
 }
 \arguments{
 \item{gene_names}{vecotr of gene symbols to be converted}
 
 \item{input_type}{String denoting the type of input given based on \link[org.Mm.eg.db]{org.Mm.eg.db}}
+
+\item{org_db}{org db package for the organism analyzed during workflow.}
 }
 \value{
 table of gene names to entrezgene ids
@@ -18,5 +20,5 @@ table of gene names to entrezgene ids
 Get entrezgenenames from ensembl
 }
 \examples{
-get_entrezgenes_from_ensembl(c("Aplnr"))
+get_entrezgenes_from_ensembl(c("Aplnr"), org_db = org.Mm.eg.db::org.Mm.eg.db)
 }

@@ -27,7 +27,8 @@ library(ComplexHeatmap)
 library(DESeq2)
 library(purrr)
 library(tidyverse)
-if (exists("snakemake")) {
+if (TRUE) {
+  write(str(snakemake), file = stderr())
   dds_path <- snakemake@input[['dds_obj']]
   cond_var <- snakemake@wildcards[["condition"]]
   diffexp_tb_path <- snakemake@input[['table']]
@@ -37,25 +38,26 @@ if (exists("snakemake")) {
   register(MulticoreParam(snakemake@threads))
   contrast_name <- contrast_groups
   plot_path <- snakemake@params[["plot_path"]]
-  comp_groups <- snakemake@config[["signif_comp"]]
   color_scheme <- snakemake@config[["group_colors"]][[cond_var]]
   organism <- snakemake@config[["organism"]]
 } else {
-  BASE_ANALYSIS_DIR = "../../../data/test_workflow"
+  the_yaml <- yaml::read_yaml("../../../config/STAD.yaml")
+  snakedir <- "/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment"
+  BASE_ANALYSIS_DIR = file.path(snakedir, "data/STAD")
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), 'deseq2/all.rds')
-  cond_var <- "condition"
+  cond_var <- names(the_yaml$diffexp$contrasts)[2]
   diffexp_tb_path <- file.path(paste0(BASE_ANALYSIS_DIR),
-  "results/diffexp/condition/Del_8_17_homo_vs_wt.diffexp.tsv")
+  glue::glue("results/diffexp/{cond_var}/{names(the_yaml$diffexp$contrasts[[cond_var]])[1]}.diffexp.tsv"))
   fpkm_path <- file.path(BASE_ANALYSIS_DIR, 'fpkm/all.tsv')
-  contrast_groups <- c("Del_8_17_homo", "wt")
+  contrast_groups <- the_yaml$diffexp$contrasts[[cond_var]][1]
   plot_path <- "."
   register(SerialParam())
   #s_groups<- c("d0-lung", "d15-lung", "d22-lung", "d36-lung", "18m-lung")
-  contrast_name <- glue::glue("{contrast_groups[[1]]} vs {contrast_groups[[2]]}")
-    the_yaml <- yaml::read_yaml("../../../configs/workflow_unit_test.yaml")
+  contrast_name <- glue::glue("{contrast_groups[1]} vs {contrast_groups[2]}")
+
   comp_groups <- the_yaml$comp_groups
   color_scheme <- the_yaml$group_colors[[cond_var]]
-  organism <- "Mus musculus"
+  organism <- "Homo sapiens"
 }
 dir.create(plot_path,recursive = T)
 
@@ -112,7 +114,7 @@ n_tfs <- 30
 # Transform to wide matrix
 sample_acts_mat <- sample_acts %>%
   filter(statistic == 'norm_wmean') %>%
-  pivot_wider(id_cols = !!cond_var, names_from = 'source',
+  pivot_wider(id_cols = "condition", names_from = 'source',
               values_from = 'score') %>%
   tibble::column_to_rownames('condition') %>%
   as.matrix()
@@ -135,7 +137,7 @@ my_color = colorRampPalette(c("Darkblue", "white","red"))(palette_length)
 
 my_breaks <- c(seq(-3, 0, length.out=ceiling(palette_length/2) + 1),
                seq(0.05, 3, length.out=floor(palette_length/2)))
-ha <- rowAnnotation(group = as.character(dds_obj@colData$condition),
+ha <- rowAnnotation(group = as.character(dds_obj@colData[, cond_var]),
                         col = list(group = 
                           as_vector(color_scheme))
 )
@@ -233,7 +235,7 @@ ggsave(filename = file.path(plot_path, glue::glue("{contrast_name}_NES_plot.svg"
 NES_plot
 ```
 
-```{r}
+```{r, eval = F}
 tf_activities_counts <- 
     dorothea::run_viper(Normalized_counts, regulons,
     options =  list(minsize = 5, eset.filter = FALSE, 

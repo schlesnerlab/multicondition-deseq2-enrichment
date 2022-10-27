@@ -4,10 +4,12 @@
 \alias{buildReactome}
 \title{Function to create Reactome DB for gene centric analysis}
 \usage{
-buildReactome(output_type = "ENSEMBL")
+buildReactome(output_type = "ENSEMBL", species)
 }
 \arguments{
-\item{output_type}{Type of gene ID to be used as output. Needs to be compatible
+\item{output_type}{Type of gene ID to be used as output. Needs to be compatible}
+
+\item{species}{Name of species being analyzed
 with org.Mm.eg.db keys}
 }
 \description{

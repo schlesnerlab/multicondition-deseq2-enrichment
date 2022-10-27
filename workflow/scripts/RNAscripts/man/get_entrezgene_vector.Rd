@@ -4,12 +4,14 @@
 \alias{get_entrezgene_vector}
 \title{transform table of genes and log fold changes to a vector of LFCs with genes as names}
 \usage{
-get_entrezgene_vector(gene_tb, input_type = "SYMBOL")
+get_entrezgene_vector(gene_tb, input_type = "SYMBOL", org_db)
 }
 \arguments{
 \item{gene_tb}{data.frame like object with first col gene names and second col LFC values}
 
 \item{input_type}{String denoting the type of input given based on \link[org.Mm.eg.db]{org.Mm.eg.db}}
+
+\item{org_db}{org db package for the organism analyzed during workflow.}
 }
 \value{
 a named vector of column 2 with names from column 1
