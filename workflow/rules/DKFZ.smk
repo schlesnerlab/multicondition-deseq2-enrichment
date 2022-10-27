@@ -21,4 +21,3 @@ rule count_matrix:
         "logs/count_matrix.log",
     script:
         "../scripts/count-matrix.py"
-
