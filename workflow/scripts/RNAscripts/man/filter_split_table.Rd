@@ -4,7 +4,7 @@
 \alias{filter_split_table}
 \title{filters table so only contrasted samples remain}
 \usage{
-filter_split_table(rld, contrast_groups, j_df, reorder_genes = TRUE)
+filter_split_table(rld, contrast_groups, j_df, reorder_genes = TRUE, cond_id)
 }
 \arguments{
 \item{rld}{DESeq2 object that has been normalized with either (rlog2 or vst)}
@@ -14,6 +14,8 @@ filter_split_table(rld, contrast_groups, j_df, reorder_genes = TRUE)
 \item{j_df}{joined tibble of deseq + fpkm values to match genes and gnames}
 
 \item{reorder_genes}{whether the order of genes should be orded by logfolgchange}
+
+\item{cond_id}{condition variable set in snakeamek}
 }
 \value{
 matrix of epxression values

@@ -9,7 +9,8 @@ mean_tibble_from_mat(
   mat,
   extra_col = NULL,
   contrast_groups = contrast_groups,
-  s_map
+  s_map,
+  cond_id
 )
 }
 \arguments{
@@ -20,6 +21,8 @@ mean_tibble_from_mat(
 \item{contrast_groups}{contrast_groups}
 
 \item{s_map}{Sample map of samples}
+
+\item{cond_id}{condition ID to setup by}
 }
 \value{
 tibble with mean values, gene names and padj values

@@ -52,14 +52,15 @@ if (exists("snakemake")) {
   group_colors <- snakemake@config[["group_colors"]][[cond_id]] %>% unlist()
   run_pert <- snakemake@config[["perform_perturbation"]]
 } else {
-  conf <- yaml::read_yaml("../../configs/VascAge_Apelin_config.yaml")
-  BASE_ANALYSIS_DIR <- conf$dirs$BASE_ANALYSIS_DIR
-  cond_id <- "condition"
+  conf <- yaml::read_yaml("../../config/STAD.yaml")
+  SARIFA_DIR <- "/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment"
+  BASE_ANALYSIS_DIR <- file.path(SARIFA_DIR, conf$dirs$BASE_ANALYSIS_DIR)
+  cond_id <- "SARIFA"
   diffexp_tables_paths <- as.list(file.path(
     BASE_ANALYSIS_DIR,
-    glue::glue("results/diffexp/condition/{names(conf$diffexp$contrasts$condition)}.diffexp.tsv")
+    glue::glue("results/diffexp/SARIFA/{names(conf$diffexp$contrasts$SARIFA)}.diffexp.tsv")
   ))
-  contrast_list <- names(conf$diffexp$contrasts$condition)
+  contrast_list <- names(conf$diffexp$contrasts$SARIFA)
 
   fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
   dds_path <- file.path(BASE_ANALYSIS_DIR, "deseq2/all.rds")
@@ -217,7 +218,9 @@ create_overlap_matrix <- function(sig_gene_names) {
 }
 
 ifelse(all(purrr::map(sig_gene_names,
-                      is.null)),create_overlap_matrix(sig_gene_names), print("No enrichments present"))
+                      is.null)),
+                      create_overlap_matrix(sig_gene_names),
+                      print("No enrichments present"))
 ```
 
 ## Gene set enrichment {.tabset}
@@ -292,13 +295,13 @@ sig_transcripts <- purrr::map(sig_gene_map, function(x) {
 
 # select <- order(var(counts(dds_obj,normalized=TRUE)),
 #                decreasing=TRUE)[1:400]
-df <- data.frame(SummarizedExperiment::colData(dds_obj)[, c("condition")])
+df <- data.frame(SummarizedExperiment::colData(dds_obj)[, c(cond_id)])
 rownames(df) <- colnames(SummarizedExperiment::assay(rld))
-colnames(df) <- "condition"
+colnames(df) <- cond_id
 
-annotation_cols <- list("condition" = group_colors)
+annotation_cols <- list(cond_id = group_colors)
 
-ha <- ComplexHeatmap::HeatmapAnnotation(condition = rld@colData$condition, col = annotation_cols)
+ha <- ComplexHeatmap::HeatmapAnnotation(condition = rld@colData[,cond_id], col = annotation_cols)
 normalized_expression <- SummarizedExperiment::assay(rld[sig_transcripts, ]) - rowMeans(SummarizedExperiment::assay(rld[sig_transcripts, ]))
 ComplexHeatmap::Heatmap(normalized_expression,
   cluster_rows = TRUE, show_row_names = FALSE,
@@ -325,7 +328,7 @@ sampleDistMatrix <- as.matrix(sampleDists)
 # rownames(sampleDistMatrix) <- paste(vsd$condition)
 colnames(sampleDistMatrix) <- NULL
 colors <- colorRampPalette(rev(brewer.pal(9, "Blues")))(255)
-pheatmap(sampleDistMatrix,
+ComplexHeatmap::pheatmap(sampleDistMatrix,
   clustering_distance_rows = sampleDists,
   clustering_distance_cols = sampleDists,
   col = colors
@@ -355,14 +358,14 @@ do so in the aged samples, hinting that the affect of apelin may differ between 
 The second group of plots give an overview of the first 5 PCs, but no clear splits can be identified in the smaller PCs. 
 
 ```{r echo = FALSE, fig.height = 8, fig_width = 8}
-PCAtools::biplot(pca_data, colby = "condition", legendPosition = "right")
+PCAtools::biplot(pca_data, colby = cond_id, legendPosition = "right")
 plot <- PCAtools::pairsplot(pca_data,
   components = PCAtools::getComponents(pca_data, c(1:5)),
   triangle = F,
   hline = 0, vline = 0,
   pointSize = 0.8,
   gridlines.major = FALSE, gridlines.minor = FALSE,
-  colby = "condition",
+  colby = cond_id,
   title = "Pairs plot", plotaxes = T,
   margingaps = ggplot2::unit(c(-0.01, -0.01, -0.01, -0.01), "cm"),
   legendPosition = "none"

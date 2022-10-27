@@ -68,6 +68,9 @@ def get_diffxp_files():
     return output_files
 
 
+#def get_model(wildcards):
+#    return config["diffexp"]["contrasts"][wildcards.]
+
 def get_strandness(units):
     if "strandedness" in units.columns:
         return units["strandedness"].tolist()

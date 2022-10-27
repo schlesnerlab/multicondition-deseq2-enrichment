@@ -23,10 +23,11 @@ knitr::opts_chunk$set(
   fig.width = 12, fig.height = 12
 )
 
-library(magrittr)
 
+library(tidyverse)
 library(clusterProfiler)
 
+library(DESeq2)
 library(enrichplot)
 library(ggupset)
 library(patchwork)
@@ -49,6 +50,7 @@ if (exists("snakemake")) {
   feature_counts_fp <- snakemake@input[["featureCounts"]]
   enrich_list <- snakemake@input[["gsea_result"]]
   cond_id <- snakemake@wildcards[["condition"]]
+  write(cond_id, file = stderr())
   contrast_groups <- snakemake@params[["contrast"]]
   samp_map <- snakemake@params[["samples"]]
   rld_path <- snakemake@input[["rld"]]
@@ -59,17 +61,19 @@ if (exists("snakemake")) {
   group_colors <- snakemake@config[["group_colors"]] %>% unlist()
   organism <- snakemake@config[["organism"]]
 } else {
-  BASE_ANALYSIS_DIR <- "../data/test_workflow"
-  comp_id <- "Del_8_17_homo_vs_wt"
-  cond_id <- "condition"
-  contrast_groups <- c("Del_8_17_homo", "WT")
+  conf <- yaml::read_yaml("../../config/STAD.yaml")
+  BASE_ANALYSIS_DIR <- file.path("/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment", conf$dirs$BASE_ANALYSIS_DIR)
+
+  cond_id <- names(conf$diffexp$contrasts)[3]
+  comp_id <- names(conf$diffexp$contrasts[[cond_id]])[1]
+  contrast_groups <- conf$diffexp$contrasts[[cond_id]][[comp_id]]
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/all.rds")
   diffexp_tb_path <- file.path(
     paste0(BASE_ANALYSIS_DIR),
-    glue::glue("results/diffexp/condition/{comp_id}.diffexp.tsv")
+    glue::glue("results/diffexp/{cond_id}/{comp_id}.diffexp.tsv")
   )
   fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
-  samp_map <- "../data/test_data/coldata.tsv"
+  samp_map <- "../../data/STAD_metadata.tsv"
   rld_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/rlog_transform.RDS.gz")
   register(SerialParam())
   plot_path <- "./"
@@ -77,10 +81,11 @@ if (exists("snakemake")) {
   pvalue_threshold <- 0.05
   enrich_list <- file.path(BASE_ANALYSIS_DIR, 
                            glue::glue("results/diffexp/{cond_id}/{comp_id}.gseares.RDS"))
-  conf <- yaml::read_yaml("../configs/VascAge_APLN_KO.yaml")
+ 
   group_colors <- conf[["group_colors"]] %>% unlist()
-  organism <- "Mus musculus"
+  organism <- "Homo sapiens"
 }
+
 dir.create(plot_path, recursive = TRUE)
 
 
@@ -122,6 +127,7 @@ aged_vs_agEC_tb <- readr::read_tsv(diffexp_tb_path,
   skip = 1
 )
 
+sample_overview <- sample_overview %>% dplyr::filter(sample %in% rownames(colData(dds_obj)))
 
 
 filer <- fpkm %>% dplyr::filter(gene %in% aged_vs_agEC_tb$gene_id)
@@ -135,9 +141,9 @@ joined_df <- joined_df %>% dplyr::mutate(overexpressed_in = ifelse(logFoldChange
 mean_tb <- joined_df %>%
   dplyr::filter(padj < pvalue_threshold &
     abs(logFoldChange) > LFC_threshold) %>%
-  mean_tibble_from_mat(., "logFoldChange",
+  RNAscripts::mean_tibble_from_mat(., "logFoldChange",
     contrast_groups = contrast_groups,
-    s_map = sample_overview
+    s_map = sample_overview, cond_id = cond_id
   )
 DT::datatable(mean_tb)
 ```
@@ -154,6 +160,7 @@ The Heatmap shows the rlog transformed Count values from deseq seq which are cen
 ```{r, fig.width = 14,fig.height =12} 
 diff_exp_trans <- SummarizedExperiment::assay(rld)[joined_df$gene, ]
 rownames(diff_exp_trans) <- joined_df$gname
+write(cond_id, file = stderr())
 df_col <- data.frame(SummarizedExperiment::colData(rld)[, c(cond_id)])
 rownames(df_col) <- colnames(SummarizedExperiment::assay(rld))
 colnames(df_col) <- cond_id
@@ -205,7 +212,35 @@ The Red and blue heatmaps show the gene expression normalized by the mean expres
 
 ```{r centered heatmap, fig.width = 14,fig.height =12}
 library(ComplexHeatmap)
+	#' Uniquify a vector
+	#'             
+	#' @param x Input factor to check
+	#' @return corrected facotr value  
+	#' @examples 
+	#' NULL
+uniquify <- function(x) {
+	  if (length(x) == 1){
+	    x
+	  } else {
+	    sprintf("%s_%02d", x, seq_along(x))
+	  }
+}
 
+	#' Disambiguate a vector        
+	#'                                                                 
+	#' Add numbered suffixes to redundant entries in a vector         
+	#'                                                               
+	#' @param in_vector Vector to be disambiguated
+	#' @importFrom stats ave
+	#' @return The disambiguated vector.
+	#' @export                        
+	#'                                 
+	#' @examples                     
+	#'  NULL                        
+	#'                             
+disambiguateVector <- function(in_vector){
+	  ave(in_vector, in_vector, FUN = uniquify)
+}                        
 Diff_exp_heatmaps <- list()
 Diff_norm_heatmaps <- list()
 
@@ -218,11 +253,13 @@ filtered_join_df <-
   joined_df[] %>% dplyr::filter(padj < pvalue_threshold &
                                   abs(logFoldChange) > LFC_threshold)
 # Since it can happen that duplicate gene names appear -> uplicates are marked
-filtered_join_df[duplicated(filtered_join_df$gname),]$gname <-
-  paste0(filtered_join_df[duplicated(filtered_join_df$gname),]$gname,
-         ".1")
+
+filtered_join_df$gname <- disambiguateVector(filtered_join_df$gname)
+
 s_table <-
-  filter_split_table(rld, contrast_groups, filtered_join_df, reorder_genes = FALSE)
+  filter_split_table(rld, contrast_groups, filtered_join_df, 
+                     reorder_genes = FALSE, 
+                     cond_id = cond_id)
 r_means <- rowMeans(s_table)
 r_sds <- apply(s_table, 1, sd)
 s_table_centered <- s_table - r_means

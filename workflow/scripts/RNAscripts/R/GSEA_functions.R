@@ -25,16 +25,17 @@ get_entrezgenes_from_ensembl <- function(gene_names, input_type = "SYMBOL",
 #'
 #' @param gene_tb data.frame like object with first col gene names and second col LFC values
 #' @param input_type String denoting the type of input given based on \link[org.Mm.eg.db]{org.Mm.eg.db}
+#' @param org_db org db package for the organism analyzed during workflow. 
 #' @return a named vector of column 2 with names from column 1
 #'
 #' @importFrom magrittr %>%
 #' @export
-get_entrezgene_vector <- function(gene_tb, input_type = "SYMBOL") {
+get_entrezgene_vector <- function(gene_tb, input_type = "SYMBOL", org_db) {
   gene_tb <- as.data.frame(gene_tb)
   if (input_type == "ENSEMBL") {
     gene_tb[, 1] <- stringr::str_extract(string = gene_tb[, 1], "^ENS[A-Z0-9]*")
   }
-  eg <- get_entrezgenes_from_ensembl(gene_tb[, 1], input_type)
+  eg <- get_entrezgenes_from_ensembl(gene_tb[, 1], input_type, org_db = org_db)
   rownames(gene_tb) <- gene_tb[, 1]
   gene_tb <- gene_tb[eg[, 1], ]
   # gene_tb <- gene_tb %>%  dplyr::filter(gene_tb[,1] %in% eg[,c(input_type)])
@@ -191,7 +192,9 @@ run_gsea <- function(DE_tb, input_type, p_valcut = 0.05, species) {
   if (input_type == "ENSEMBL") {
     DE_tb[, 1] <- stringr::str_extract(string = DE_tb[, 1], "^ENS[A-Z0-9]*")
   }
-  eg <- get_entrezgenes_from_ensembl(DE_tb[, 1], input_type = input_type)
+  org_db <- RNAscripts::get_org_db(species)
+  eg <- get_entrezgenes_from_ensembl(DE_tb[, 1], input_type = input_type,
+                                     org_db = org_db)
   rownames(DE_tb) <- DE_tb[, 1]
   DE_tb <- DE_tb[eg[, 1], ]
   # DE_tb <- DE_tb %>% dplyr::filter(DE_tb[,1] %in% eg[,1])
@@ -264,6 +267,7 @@ buildReactome <- function(output_type = "ENSEMBL", species) {
 #' NULL
 plot_enrichment <- function(GSEA_table, X, Y, pval = "pval", pval_threshold = 0.1,
                             n_max = 20) {
+  GSEA_table <- GSEA_table %>% dplyr::filter(!duplicated(!!sym(X)))
   GSEA_tb <- tibble::as_tibble(GSEA_table) %>%
     dplyr::arrange(dplyr::desc(!!as.name(Y))) %>%
     dplyr::filter(abs(!!as.name(pval)) < pval_threshold) %>%

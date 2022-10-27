@@ -36,23 +36,29 @@ if (exists("snakemake")) {
   color_scheme <- snakemake@config[["group_colors"]][[cond_id]]
   organism <- snakemake@config[["organism"]]
 } else {
-  the_yaml <- yaml::read_yaml("../../../config/workflow_unit_test.yaml")
-
-  BASE_ANALYSIS_DIR = '../../../data/test_workflow'
-  cond_id <- "condition"
-  comp_id <- "AECplusA-vs-AEC"
-  dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/all.rds")
-  diffexp_tb_path <- file.path(BASE_ANALYSIS_DIR, 
-                               glue::glue("results/diffexp/{comp_id}.diffexp.tsv"))
-  fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
-  contrast_groups <- c("AECplusA", "AEC")
+  the_yaml <- yaml::read_yaml("../../../config/STAD.yaml")
+  snakedir <- "/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment"
+  BASE_ANALYSIS_DIR = file.path(snakedir, "data/STAD")
+  cond_id <- "SARIFA"
+  dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), 'deseq2/all.rds')
+  comp_id <- names(the_yaml$diffexp$contrasts)[1]
+  diffexp_tb_path <- file.path(paste0(BASE_ANALYSIS_DIR),
+    glue::glue("results/diffexp/{cond_id}/{names(the_yaml$diffexp$contrasts[[cond_id]])[1]}.diffexp.tsv"))
+  fpkm_path <- file.path(BASE_ANALYSIS_DIR, 'fpkm/all.tsv')
+  contrast_groups <- the_yaml$diffexp$contrasts[[cond_id]][1]
   plot_path <- "."
   register(SerialParam())
-  s_groups<- c("AECplusA", "AEC")
-  contrast_name <- glue::glue("{contrast_groups[[1]]} vs {contrast_groups[[2]]}")
+  s_groups <- names(the_yaml$group_colors[[cond_id]])
+  #s_groups<- c("d0-lung", "d15-lung", "d22-lung", "d36-lung", "18m-lung")
+  contrast_name <- glue::glue("{contrast_groups[1]} vs {contrast_groups[2]}")
+
   comp_groups <- the_yaml$comp_groups
-  color_scheme <- the_yaml$group_colors$condition
-  organism <- "Mus musculus"
+  color_scheme <- the_yaml$group_colors[[cond_id]]
+  organism <- "Homo sapiens"
+  
+ 
+
+
   
 }
 dir.create(plot_path, recursive = T)
@@ -100,14 +106,14 @@ org_name <- get_organism_omnipath_name(organism)
 prog_net <- decoupleR::get_progeny(organism = org_name, top = 100)
 
 
-PathwayActivity_counts <- progeny(Normalized_counts, scale = T, organism = "Mouse", top = 1000, verbose = F, perm = 1) 
+PathwayActivity_counts <- progeny(Normalized_counts, scale = T, organism = org_name, top = 1000, verbose = F, perm = 1) 
 # Test case has some nans in progeny, these are set to 0
 PathwayActivity_counts[is.nan(PathwayActivity_counts)] <- 0
 
 Activity_counts <- as.vector(PathwayActivity_counts)
 
 
-ann_col <- colData(dds_obj) %>% as_tibble()%>% pull("condition") %>% fct_relevel(names(color_scheme))
+ann_col <- colData(dds_obj) %>% as_tibble()%>% pull(!!sym(cond_id)) %>% fct_relevel(names(color_scheme))
 
 top_anno <- ComplexHeatmap::HeatmapAnnotation(sample = ann_col, 
                                                 col = list("sample" = as_vector(color_scheme)))
@@ -160,7 +166,7 @@ to infer pathway changes between the comparison groups.
 
 ```{r}
 PathwayActivity_zscore <- progeny(diffexp_matrix, 
-    scale=TRUE, organism="Mouse", top = 100, perm = 10000, z_scores = TRUE, verbose = T) %>%
+    scale=TRUE, organism=org_name, top = 100, perm = 10000, z_scores = TRUE, verbose = T) %>%
     t()
 colnames(PathwayActivity_zscore) <- "NES"
 ```
@@ -240,7 +246,7 @@ sample_acts_mat <- scale(sample_acts_mat) %>% t()
 sample_acts_mat <- sample_acts_mat[,rownames(dds_obj@colData)]
 
 
-ha <- HeatmapAnnotation(group = dds_obj@colData$condition,
+ha <- HeatmapAnnotation(group = dds_obj@colData[, cond_id],
                         col = list(group = 
                           as_vector(color_scheme))
 )
@@ -268,7 +274,7 @@ plot_activity[,cond_id] <- ann_col
 
 for(pathway in kruskal_test$pathway) {
   pval <- kruskal_test %>% dplyr::filter(pathway == !!pathway) %>% pull(padj) 
-  p <- ggplot(plot_activity, aes(x = condition, y = !!sym(pathway), fill = condition)) + 
+  p <- ggplot(plot_activity, aes(x = !!sym(cond_id), y = !!sym(pathway), fill = !!sym(cond_id))) + 
     geom_boxplot(outlier.shape = NA, color = "black") + geom_jitter(width = 0.1) + theme_bw() + 
     scale_fill_manual(values = as_vector(color_scheme)) +
     geom_hline(yintercept = 0) + ggtitle(pathway) + labs(caption= paste0("kruskal adj.p = ", round(pval, 4))) + ylab("progeny score") + 

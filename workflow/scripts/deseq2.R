@@ -15,6 +15,12 @@ if (snakemake@threads > 1) {
 dds <- readRDS(snakemake@input[[1]])
 
 contrast <- c(snakemake@wildcards[["condition"]], snakemake@params[["contrast"]])
+if (!is.null(snakemake@config$diffexp$custom_model[[contrast[1]]])) {
+  # Rerun deseq since it was intialized 
+  colData(dds)[,contrast[1]] <- as.factor(colData(dds)[,contrast[1]])
+  design(dds) <- as.formula(snakemake@config$diffexp$custom_model[[contrast[1]]])
+  dds <- DESeq(dds)
+}
 res <- results(dds, contrast = contrast, parallel = parallel)
 resstat <- res$stat
 # shrink fold changes for lowly expressed genes

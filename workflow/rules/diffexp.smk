@@ -21,7 +21,7 @@ rule deseq2_init:
 
 rule pca:
     input:
-        join(BASE_ANALYSIS_DIR, "deseq2/all.rds"),
+        join(BASE_ANALYSIS_DIR, "deseq2/rlog_transform.RDS.gz"),
     output:
         report(join(BASE_ANALYSIS_DIR, "results/pca.svg"), "../report/pca.rst"),
     params:
