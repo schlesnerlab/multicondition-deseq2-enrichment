@@ -6,3 +6,5 @@ dependencies:
   - snakemake
   - snakedeploy
   - pandas
+  - numpy
+  - python=3.10.*
