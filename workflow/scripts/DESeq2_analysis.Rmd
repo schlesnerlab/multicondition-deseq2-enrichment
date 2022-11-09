@@ -38,7 +38,7 @@ if (!require("RNAscripts")) {
 }
 library("RNAscripts")
 library("BiocParallel")
-
+library(ComplexHeatmap)
 ```
 
 
@@ -58,13 +58,13 @@ if (exists("snakemake")) {
   LFC_threshold <- snakemake@config[["diffexp"]][["LFC_threshold"]]
   pvalue_threshold <- snakemake@config[["diffexp"]][["pval_threshold"]]
   plot_path <- snakemake@params[["plot_path"]]
-  group_colors <- snakemake@config[["group_colors"]] %>% unlist()
+  group_colors <- snakemake@config[["group_colors"]][[cond_id]] %>% unlist()
   organism <- snakemake@config[["organism"]]
 } else {
-  conf <- yaml::read_yaml("../../config/STAD.yaml")
-  BASE_ANALYSIS_DIR <- file.path("/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment", conf$dirs$BASE_ANALYSIS_DIR)
+  conf <- yaml::read_yaml("../../configs/VascAge_config.yaml")
+  BASE_ANALYSIS_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
 
-  cond_id <- names(conf$diffexp$contrasts)[3]
+  cond_id <- names(conf$diffexp$contrasts)[1]
   comp_id <- names(conf$diffexp$contrasts[[cond_id]])[1]
   contrast_groups <- conf$diffexp$contrasts[[cond_id]][[comp_id]]
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/all.rds")
@@ -73,7 +73,7 @@ if (exists("snakemake")) {
     glue::glue("results/diffexp/{cond_id}/{comp_id}.diffexp.tsv")
   )
   fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
-  samp_map <- "../../data/STAD_metadata.tsv"
+  samp_map <- "../../data/Vasc_age2020/Vascage_samples.tsv"
   rld_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/rlog_transform.RDS.gz")
   register(SerialParam())
   plot_path <- "./"
@@ -82,8 +82,8 @@ if (exists("snakemake")) {
   enrich_list <- file.path(BASE_ANALYSIS_DIR, 
                            glue::glue("results/diffexp/{cond_id}/{comp_id}.gseares.RDS"))
  
-  group_colors <- conf[["group_colors"]] %>% unlist()
-  organism <- "Homo sapiens"
+  group_colors <- conf[["group_colors"]][[cond_id]] %>% unlist()
+  organism <- conf$organism
 }
 
 dir.create(plot_path, recursive = TRUE)
@@ -162,6 +162,10 @@ diff_exp_trans <- SummarizedExperiment::assay(rld)[joined_df$gene, ]
 rownames(diff_exp_trans) <- joined_df$gname
 write(cond_id, file = stderr())
 df_col <- data.frame(SummarizedExperiment::colData(rld)[, c(cond_id)])
+col_annotation <-
+  HeatmapAnnotation(condition = dds_obj@colData[, cond_id],
+                    col = list(condition = group_colors))
+
 rownames(df_col) <- colnames(SummarizedExperiment::assay(rld))
 colnames(df_col) <- cond_id
 index_vec <- which(joined_df$padj < pvalue_threshold & abs(joined_df$logFoldChange) > LFC_threshold)
@@ -171,11 +175,10 @@ small_joined_df <- na.omit(small_joined_df)
 
 if (nrow(small_joined_df) > 1) {
   scaled_diffexp <- diff_exp_genes# - rowMeans(diff_exp_genes)
-  diffexp_heatmap <- pheatmap::pheatmap(head(scaled_diffexp[order(abs(small_joined_df$logFoldChange * -log10(small_joined_df$padj)), decreasing = T), ], 50),
-    cluster_rows = T, show_rownames = T,
-    cluster_cols = TRUE, annotation_col = df_col, annotation_colors = list(cond_id = group_colors)
+  diffexp_heatmap <- Heatmap(head(scaled_diffexp[order(abs(small_joined_df$logFoldChange * -log10(small_joined_df$padj)), decreasing = T), ], 50),
+    top_annotation = col_annotation
   )
-  save_pheatmap_svg(x = diffexp_heatmap, filename = file.path(plot_path, "diffexp_heatmap.svg"))
+  save_cheatmap_svg(x = diffexp_heatmap, filename = file.path(plot_path, "diffexp_heatmap.svg"))
   diffexp_heatmap
 }
 ```
@@ -211,7 +214,7 @@ The Red and blue heatmaps show the gene expression normalized by the mean expres
 
 
 ```{r centered heatmap, fig.width = 14,fig.height =12}
-library(ComplexHeatmap)
+
 	#' Uniquify a vector
 	#'             
 	#' @param x Input factor to check
@@ -247,7 +250,7 @@ Diff_norm_heatmaps <- list()
 
 col_annotation <-
   HeatmapAnnotation(condition = dds_obj@colData[dds_obj@colData[, cond_id] %in% contrast_groups, cond_id],
-                    col = list(anno_col_vec = group_colors))
+                    col = list(condition = group_colors))
 
 filtered_join_df <-
   joined_df[] %>% dplyr::filter(padj < pvalue_threshold &
@@ -360,7 +363,7 @@ do_gseaplots <- function(enrich_res, gene_stats = NULL, id_class = "ENTREZID") {
       enrich_read <- enrich_res
     }
     #  y <- enrichplot::heatplot(enrich_read, showCategory = 10, foldChange = gene_stats)
-    z <- enrichplot::upsetplot(enrich_read, foldChange = gene_stats)
+    z <- enrichplot::upsetplot(enrich_res)
 
     return(list("upset" = z))
   }
@@ -425,7 +428,11 @@ save_dotplots <- function(d_plot, p_group, p_path = plot_path, gsea_type) {
 }
 cat("### ", "msigdb gsea", " \n")
 
-do_gseaplots(msig_gsea, get_entrezgene_vector(setNames(object = joined_df$logFoldChange, nm = as.data.frame(geneList)[, 1]), input_type = "ENSEMBL"), id_class = "ENSEMBL")
+x <- do_gseaplots(msig_gsea, setNames(object = joined_df$logFoldChange, 
+                                      nm = str_extract(joined_df$gene, 
+                                                       pattern = "ENS[A-Z0-9]*")), id_class = "ENSEMBL")
+
+x
 msig_set <- clusterProfiler::setReadable(msig_gsea, org_db, "ENSEMBL")
 if (nrow(msig_gsea) > 1) {
   enriched_plot <- plot_enrichment(msig_gsea@result, X = "ID", Y = "NES", pval = "p.adjust")

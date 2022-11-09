@@ -46,20 +46,14 @@ get_entrezgene_vector <- function(gene_tb, input_type = "SYMBOL", org_db) {
 
 #' Take two columns from a data frame and move these to a list
 #'
-#' Useful for dealing with duplicated intries to build a translation table
+#' Useful for dealing with duplicated entries to build a translation table
 #' @param tb Tibble containing the two columns to transform
 #' @param ref_col Reference column to be used a name
 #' @param val_col Value Columns containing values
 #' @export
 table_to_list <- function(tb, ref_col, val_col) {
-  list_name <- dplyr::pull(tibble::as_tibble(tb), ref_col)
-  output_list <- list()
-  for (l_name in unique(list_name)) {
-    id_names <- tb %>%
-      dplyr::filter(get(ref_col) == l_name) %>%
-      dplyr::pull(get(val_col))
-    output_list[[l_name]] <- id_names
-  }
+  formu <- paste0(val_col, "~", ref_col) %>% as.formula()
+  output_list <- tb %>% unstack(formu)
 
   output_list
 }
