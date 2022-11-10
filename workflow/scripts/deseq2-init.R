@@ -18,13 +18,14 @@ if (!exists("snakemake")) {
   coldata <- read.table("../../data/STAD_metadata.tsv",
     header = TRUE,
     row.names = "sample",
-    check.names = FALSE
+    check.names = FALSE, 
+    stringsAsFactors = TRUE
   )
   snakemake_conf <- yaml::read_yaml("../../config/STAD.yaml")
   all_conditions <- names(snakemake_conf$diffexp$contrasts)
 }
-
 all_conditions <- names(snakemake@config$diffexp$contrasts)
+
 
 # colData and countData must have the same sample order, but this is ensured
 # by the way we create the count matrix
@@ -39,7 +40,6 @@ coldata <- read.table(snakemake@params[["samples"]],
 )
 
 
-
 ## Reorder coldata rows to match cts col order (beacause deseq things)
 if (!all(colnames(cts) == rownames(coldata))) {
   sample_ids <- colnames(cts)
@@ -50,6 +50,10 @@ if (any(is.na(coldata[, c(all_conditions)]))) {
   na_index <- apply(coldata, 1, function(x) {any(is.na(x))})
   coldata <- coldata[!na_index,]
   cts <- cts[, rownames(coldata)]
+}
+all_conditions <- names(snakemake@config$diffexp$contrasts)
+for (x in all_conditions) {
+  coldata[,x] <- as.factor(coldata[,x]) 
 }
 
 dds <- DESeqDataSetFromMatrix(

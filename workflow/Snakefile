@@ -19,6 +19,11 @@ samples = pd.read_table(config["samples"]).set_index("sample", drop=False)
 samples = samples.replace(np.nan, "NA")
 validate(samples, schema="schemas/samples.schema.yaml")
 
+if config["DKFZ"]:
+    units = pd.read_table(config["units"]).set_index("sample", drop=False)
+else:
+    units = samples
+
 BASE_DATA_DIR = config["dirs"]["BASE_DATA_DIR"]
 BASE_ANALYSIS_DIR = config["dirs"]["BASE_ANALYSIS_DIR"]
 CONTRASTS = config["diffexp"]["contrasts"]
@@ -90,6 +95,10 @@ if config["run_carnival"]["sample"]:
         [join(BASE_ANALYSIS_DIR, "reports/carnival/carnival_sample_report.html")]
     )
 
+if config["DKFZ"]:
+    salmon_files.extend(
+        [join(BASE_ANALYSIS_DIR, "qc/multiqc_report.html")]
+    )
 
 diffexp_files = get_diffxp_files()
 
@@ -117,3 +126,6 @@ report: "report/workflow.rst"
 
 include: "rules/diffexp.smk"
 include: "rules/Carnival.smk"
+
+if config["DKFZ"]:
+    include: "rules/DKFZ.smk"

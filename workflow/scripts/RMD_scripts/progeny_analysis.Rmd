@@ -36,10 +36,10 @@ if (exists("snakemake")) {
   color_scheme <- snakemake@config[["group_colors"]][[cond_id]]
   organism <- snakemake@config[["organism"]]
 } else {
-  the_yaml <- yaml::read_yaml("../../../config/STAD.yaml")
-  snakedir <- "/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment"
-  BASE_ANALYSIS_DIR = file.path(snakedir, "data/STAD")
-  cond_id <- "SARIFA"
+  the_yaml <- yaml::read_yaml("../../../configs/VascAge_cre_config.yaml")
+  #snakedir <- "/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment"
+  BASE_ANALYSIS_DIR = the_yaml$dirs$BASE_ANALYSIS_DIR
+  cond_id <- "condition"
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), 'deseq2/all.rds')
   comp_id <- names(the_yaml$diffexp$contrasts)[1]
   diffexp_tb_path <- file.path(paste0(BASE_ANALYSIS_DIR),
@@ -54,11 +54,7 @@ if (exists("snakemake")) {
 
   comp_groups <- the_yaml$comp_groups
   color_scheme <- the_yaml$group_colors[[cond_id]]
-  organism <- "Homo sapiens"
-  
- 
-
-
+  organism <- "Mus musculus"
   
 }
 dir.create(plot_path, recursive = T)

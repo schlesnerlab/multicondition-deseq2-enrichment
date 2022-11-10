@@ -43,15 +43,16 @@ if (exists("snakemake")) {
   color_scheme <- purrr::map(snakemake@config[["group_colors"]], unlist)
   organism <- snakemake@config[["organism"]]
 } else {
-  BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/apelin_exp_test"
-  comp_id <- "YECplusA-vs-YEC"
-  cond_id <- "condition"
-  contrast_groups <- c("Young-EC_apelin", "Young-EC")
+  BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/tec_aplnKO"
+#  comp_id <- "YECplusA-vs-YEC"
+
+#  contrast_groups <- c("Young-EC_apelin", "Young-EC")
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/all.rds")
   fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
-  samp_map <- "../../data/apelin_2020/VascAge_samples_apelin.tsv"
+  samp_map <- "../../data/tumor_vs_ec/Apln_KO.tsv"
   plot_path <- "./"
-  the_yaml <- yaml::read_yaml("../../configs/VascAge_Apelin_config.yaml")
+  the_yaml <- yaml::read_yaml("../../configs/tec_aplnKO.yaml")
+  cond_id <- names(the_yaml$diffexp$contrasts)
   comp_groups <- the_yaml$comp_groups
   color_scheme <- purrr::map(the_yaml$group_colors, unlist)
   organism <- "Mus musculus"
@@ -157,7 +158,7 @@ The y axis shows the TF factor, the x axis the NES.
 plot_doro_plots <-  function(tf_activities, dds_file, cond) {
   mean_tf_activities <- mean_tibble_from_mat(tf_activities,
                                              contrast_groups = colData(dds_file)[, cond],
-                                             s_map = sample_overview, cond_id = cond_id)
+                                             s_map = sample_overview, cond_id = cond)
   mean_tf_activities["TF"] <- rownames(tf_activities)
   plot_list <- list()
   for (c_group in unique(sample_overview %>% pull(!!cond))) {
