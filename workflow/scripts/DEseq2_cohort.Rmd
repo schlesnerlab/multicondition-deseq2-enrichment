@@ -15,6 +15,7 @@ fig_height: 9
 </style>
 
 ```{r setup, include=FALSE}
+
 knitr::opts_chunk$set(
   echo = FALSE, warning = FALSE, message = FALSE,
   dev = "png",
@@ -52,13 +53,13 @@ if (exists("snakemake")) {
   group_colors <- snakemake@config[["group_colors"]][[cond_id]] %>% unlist()
   run_pert <- snakemake@config[["perform_perturbation"]]
 } else {
-  conf <- yaml::read_yaml("../../config/STAD.yaml")
+  conf <- yaml::read_yaml("../../configs/tec_age_young.yaml")
   SARIFA_DIR <- "/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment"
-  BASE_ANALYSIS_DIR <- file.path(SARIFA_DIR, conf$dirs$BASE_ANALYSIS_DIR)
-  cond_id <- "SARIFA"
+  BASE_ANALYSIS_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
+  cond_id <- names(conf$diffexp$contrasts)[1]
   diffexp_tables_paths <- as.list(file.path(
     BASE_ANALYSIS_DIR,
-    glue::glue("results/diffexp/SARIFA/{names(conf$diffexp$contrasts$SARIFA)}.diffexp.tsv")
+    glue::glue("results/diffexp/{cond_id}/{names(conf$diffexp$contrasts[[cond_id]])}.diffexp.tsv")
   ))
   contrast_list <- names(conf$diffexp$contrasts$SARIFA)
 
@@ -180,7 +181,7 @@ if (length(sig_gene_names) > 1) {
 #                                       decreasing = T), )
 #}
 
-#test
+test
 ```
 
 ```{r, echo = FALSE}

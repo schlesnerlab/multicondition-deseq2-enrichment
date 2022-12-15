@@ -20,14 +20,15 @@ convertHumanGeneList <- function(x, hmart, mmart) {
 #' convert between human and mouse homologs using homolog table
 #'
 #' @param x List of genes
-#' @param jax_database Databse from outside to reduce http calls
+#' @param jax_database Database from outside to reduce http calls
+#' @param input_organism Organism being converted from (Homo sapiens or Mus musculus)
 #'
 #' @return
 #' @export
 #'
 #' @examples
 #' convertHumanGeneHomologs(c("APLNR", "APLNR"))
-convertHumanGeneHomologs <- function(x, jax_database = NULL) {
+convertHumanGeneHomologs <- function(x, jax_database = NULL, input_organism = "Homo sapiens") {
   if (is.null(jax_database)) {
     mouse_human_homologs <- readr::read_tsv("http://www.informatics.jax.org/downloads/reports/HMD_HumanPhenotype.rpt",
       col_names = c("hgene", "hID", "mgene", "mID", "lcol")
@@ -35,9 +36,20 @@ convertHumanGeneHomologs <- function(x, jax_database = NULL) {
   } else {
     mouse_human_homologs <- jax_database
   }
-  mouse_human_homologs %>%
+  if (input_organism == "Homo sapiens") {
+    gene_list <- mouse_human_homologs %>%
     dplyr::filter(hgene %in% x) %>%
     dplyr::pull(mgene)
+    
+  } else if (input_organism == "Mus musculus") {
+    gene_list <- mouse_human_homologs %>%
+      dplyr::filter(mgene %in% x) %>% dplyr::arrange(match(mgene, x)) %>%
+      dplyr::pull(hgene)
+  } else {
+    stop("input_organism not supported choose Mus musculus or Homo sapiens")
+  }
+    
+  gene_list
 }
 
 

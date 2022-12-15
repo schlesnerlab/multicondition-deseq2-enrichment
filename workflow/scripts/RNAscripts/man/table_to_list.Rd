@@ -14,5 +14,5 @@ table_to_list(tb, ref_col, val_col)
 \item{val_col}{Value Columns containing values}
 }
 \description{
-Useful for dealing with duplicated intries to build a translation table
+Useful for dealing with duplicated entries to build a translation table
 }

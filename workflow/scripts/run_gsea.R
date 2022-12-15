@@ -12,17 +12,21 @@ if (exists("snakemake")) {
   out_file <- snakemake@output[["gsea_result"]]
   organism <- snakemake@config[["organism"]]
 } else {
-  BASE_DIR <- "data/STAD"
-  contrast <- "SARIFA_vs_NON-SARIFA"
-  contrast_groups <- c("1", "0")
+  conf <- yaml::read_yaml("../../configs/VascAge_config.yaml")
+  BASE_ANALYSIS_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
+  
+  cond_id <- names(conf$diffexp$contrasts)[1]
+  comp_id <- names(conf$diffexp$contrasts[[cond_id]])[1]
+
+  contrast_groups <- conf$diffexp$contrasts[[cond_id]][[comp_id]]
   diffexp_tb_path <- file.path(
-    BASE_DIR,
-    glue::glue("results/diffexp/SARIFA/{contrast}.diffexp.tsv")
+    BASE_ANALYSIS_DIR,
+    glue::glue("results/diffexp/{cond_id}/{comp_id}.diffexp.tsv")
   )
-  fpkm_path <- file.path(BASE_DIR, "fpkm/all.tsv")
+  fpkm_path <- file.path(BASE_ANALYSIS_DIR , "fpkm/all.tsv")
   pvalue_threshold <- 0.05
   LFC_threshold <- 0.5
-  organism <- "Homo sapiens"
+  organism <- "Mus musculus"
 }
 org_db <- RNAscripts::get_org_db(organism)
 
@@ -68,6 +72,7 @@ msig_enrichment <- RNAscripts::run_msig_enricher(list(de_genes),
   translation_table = NULL, msdb_var = "ensembl_gene",
   input_type = "ENSEMBL", category = "H", species = organism
 )[[1]]
+
 # Run the MSIG enricher
 msig_gsea <- RNAscripts::run_msig_enricher(list(ensemblgene_list),
   translation_table = NULL,
@@ -90,7 +95,7 @@ msig_c6 <- RNAscripts::run_msig_enricher(list(ensemblgene_list),
   input_type = "ENSEMBL",
   category = "C6", eps = 0, species = organism
 )[[1]]
-
+gc()
 kegg <- RNAscripts::run_gsea(ensemblgene_list,
   input_type = "ENSEMBL", p_valcut = 0.1, species = organism
 )

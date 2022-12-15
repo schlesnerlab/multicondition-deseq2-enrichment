@@ -167,3 +167,24 @@ save_cheatmap_svg <- function(x, filename, width = 7, height = 7) {
   ComplexHeatmap::draw(x)
   dev.off()
 }
+
+#' Parse deseq2 results
+#'
+#' @param filepath Path to DESeq2 results object form res saved as tsv
+#'
+#' @return Tibble of DES2 results. 
+#' @export
+#'
+#' @examples
+read_deseq_tibble <- function(filepath) {
+  readr::read_tsv(filepath,
+                  col_names = c(
+                    "gene_id",
+                    "baseMean",
+                    "logFoldChange",
+                    "lfcSE", "stat",
+                    "pvalue", "padj"
+                  ),
+                  skip = 1
+  )  
+}

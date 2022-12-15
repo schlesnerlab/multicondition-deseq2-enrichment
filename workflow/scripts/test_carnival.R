@@ -39,6 +39,7 @@ if (exists("snakemake")) {
   comp_groups <- snakemake@config[["signif_comp"]]
   color_scheme <- snakemake@config[["group_colors"]]
   cplex_path <- snakemake@config[["cplex_solver"]]
+  stopifnot("Cplexpath doesnt exist please give path" = file.exists(cplex_path))
   temp_path <- snakemake@params[["temp_path"]]
   nr <- snakemake@resources[["nr"]]
   thread_num <- snakemake@threads
@@ -48,11 +49,11 @@ if (exists("snakemake")) {
   perturbation_gene <- snakemake@params[["perturbation_gene"]]
   progeny_data <- "../data/progenyMembers.RData"
 } else {
-  BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/APLN_KO"
+  BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/APLNR_KO"
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/all.rds")
   diffexp_tb_path <- file.path(
     paste0(BASE_ANALYSIS_DIR),
-    "results/diffexp/AplnKO_vs_basal.diffexp.tsv"
+    "results/diffexp/condition/AplnKO_vs_basal.diffexp.tsv"
   )
   fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
   contrast_groups <- c("AplnKO", "basal")

@@ -12,9 +12,10 @@ rule count_matrix:
         ),
     output:
         join(BASE_ANALYSIS_DIR, "counts/all.tsv"),
+        join(BASE_ANALYSIS_DIR, "fpkm/true_fpkm.tsv")
     params:
-        samples=samples["sample"].tolist(),
-        strand=get_strandness(samples),
+        samples=units["sample"].tolist(),
+        strand=get_strandness(units),
     conda:
         "../envs/pandas.yaml"
     log:
@@ -235,11 +236,11 @@ rule multiqc:
 
 rule export_xlsx:
     input:
-        fpkm = join(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
+        fpkm = join(BASE_ANALYSIS_DIR, "fpkm/true_fpkm.tsv")
     output:
         xlsx = join(BASE_ANALYSIS_DIR, "fpkm/all.xlsx")
     conda:
-        "../envs/python3.yaml"
+        "../envs/pandas.yaml"
     threads: 1
     resources:
         mem_mb = 8192,

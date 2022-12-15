@@ -1,11 +1,14 @@
 ---
 title: "DEseq_2_analysis"
 author: "Christian Heyer"
-date: r`Sys.Date`
-output: 
+date: "r`Sys.Date`"
+output:
   html_document:
-    toc: true
+    toc: yes
     toc_depth: 2
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
 ---
 ```{css, echo=FALSE}
 body .main-container {
@@ -19,7 +22,7 @@ body {
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  echo = FALSE, warning = FALSE, message = FALSE, dev = "png",
+  echo = FALSE, warning = FALSE, message = FALSE,
   fig.width = 12, fig.height = 12
 )
 
@@ -52,27 +55,36 @@ if (exists("snakemake")) {
   cond_id <- snakemake@wildcards[["condition"]]
   write(cond_id, file = stderr())
   contrast_groups <- snakemake@params[["contrast"]]
+  coef_string <- paste0(cond_id,"_", contrast_groups[[1]],"_vs_", contrast_groups[[2]])
   samp_map <- snakemake@params[["samples"]]
+  lfc_shrink <- snakemake@config[["diffexp"]][["shrink_lfc"]]
   rld_path <- snakemake@input[["rld"]]
   register(MulticoreParam(snakemake@threads))
   LFC_threshold <- snakemake@config[["diffexp"]][["LFC_threshold"]]
   pvalue_threshold <- snakemake@config[["diffexp"]][["pval_threshold"]]
   plot_path <- snakemake@params[["plot_path"]]
   group_colors <- snakemake@config[["group_colors"]][[cond_id]] %>% unlist()
+  if (!is.null(snakemake@config[["diffexp"]][["custom_model"]][[cond_id]])) {
+    model_string <- snakemake@config[["diffexp"]][["custom_model"]][[cond_id]]
+  } else {
+    model_string <-  snakemake@config[["diffexp"]][["model"]] 
+  }
   organism <- snakemake@config[["organism"]]
+  conf <- snakemake@config
 } else {
   conf <- yaml::read_yaml("../../configs/VascAge_config.yaml")
   BASE_ANALYSIS_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
 
   cond_id <- names(conf$diffexp$contrasts)[1]
-  comp_id <- names(conf$diffexp$contrasts[[cond_id]])[1]
+  comp_id <- names(conf$diffexp$contrasts[[cond_id]])[3]
   contrast_groups <- conf$diffexp$contrasts[[cond_id]][[comp_id]]
+  coef_string <- paste0(cond_id,"_", contrast_groups[[1]],"_vs_", contrast_groups[[2]])
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/all.rds")
   diffexp_tb_path <- file.path(
     paste0(BASE_ANALYSIS_DIR),
     glue::glue("results/diffexp/{cond_id}/{comp_id}.diffexp.tsv")
   )
-  fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
+  fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/true_fpkm.tsv")
   samp_map <- "../../data/Vasc_age2020/Vascage_samples.tsv"
   rld_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/rlog_transform.RDS.gz")
   register(SerialParam())
@@ -84,6 +96,8 @@ if (exists("snakemake")) {
  
   group_colors <- conf[["group_colors"]][[cond_id]] %>% unlist()
   organism <- conf$organism
+  lfc_shrink <- T
+  model_string <- "~ condition"
 }
 
 dir.create(plot_path, recursive = TRUE)
@@ -110,6 +124,39 @@ analysis. A significance level p-value of `r pvalue_threshold` is used. Additona
 are deemed significant.
 
 All resulting plots are also exported as a svg file. 
+
+## MA plots
+
+showing the results of the MAPlot depending on if logFoldShrinkage has been performed
+`r ifelse(lfc_shrink, "LFC shrinkage done", "No LFC Shrinkage") `
+
+
+```{r MAPlot}
+if (!is.null(conf$diffexp$custom_model[[cond_id]])) {
+  model_string <- conf$diffexp$custom_model[[cond_id]]
+  # Rerun deseq since it was intialized 
+  for (x in names(conf[["diffexp"]][["contrasts"]])) {
+    colData(dds_obj)[,x] <- as.factor(colData(dds_obj)[,x]) 
+  }
+  colData(dds_obj)[,cond_id] <- as.factor(colData(dds_obj)[,cond_id])
+  design(dds_obj) <- as.formula(model_string)
+  dds_obj <- DESeq(dds_obj)
+  dds_obj@colData[,cond_id] <- relevel(dds_obj@colData[,cond_id], ref = contrast_groups[2])
+
+}
+if (lfc_shrink){
+  dds_obj@colData[,cond_id] <- relevel(dds_obj@colData[,cond_id], ref = contrast_groups[2])
+  design(dds_obj) <- as.formula(model_string)
+  dds_obj <- DESeq(dds_obj)
+  write(coef_string, file = stderr())
+  res <- lfcShrink(dds_obj, coef = stringr::str_replace_all(coef_string,"-","."),type = "apeglm")
+  #plotMA(res) -> t
+} else{
+  res <- results(dds_obj, contrast = c(cond_id, contrast_groups))
+ # plotMA(res)
+}
+DESeq2::plotMA(res)
+```
 
 
 ```{r load DEseq data, echo=FALSE}
@@ -575,23 +622,3 @@ if (nrow(reactome_stuff) > 1) {
 }
 ```
 
-```{r, fig.height = 10, fig.width = 10, eval = FALSE}
-
-
-run_reactomePA <- function(DEgenes_mapped, DEgenes_enriched) {
-  reactome_enrichment <- enrichPathway(
-    gene = names(DEgenes_enriched),
-    universe = names(DEgenes_mapped),
-    pvalueCutoff = 0.05,
-    readable = F,
-    organism = "mouse"
-  )
-  return(reactome_enrichment)
-}
-reactome_readable <- DOSE::setReadable(reactome_stuff, OrgDb = org_db)
-
-if (nrow(reactome_stuff@result) > 1) {
-  library(enrichplot)
-  enrichplot::cnetplot(reactome_readable)
-}
-```

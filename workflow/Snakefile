@@ -21,13 +21,13 @@ validate(samples, schema="schemas/samples.schema.yaml")
 
 if config["DKFZ"]:
     units = pd.read_table(config["units"]).set_index("sample", drop=False)
+    SEQ_TYPE = config["SEQ_TYPE"]
 else:
     units = samples
 
 BASE_DATA_DIR = config["dirs"]["BASE_DATA_DIR"]
 BASE_ANALYSIS_DIR = config["dirs"]["BASE_ANALYSIS_DIR"]
 CONTRASTS = config["diffexp"]["contrasts"]
-SEQ_TYPE = "paired"
 
 ##### target rules #####
 
@@ -97,7 +97,8 @@ if config["run_carnival"]["sample"]:
 
 if config["DKFZ"]:
     salmon_files.extend(
-        [join(BASE_ANALYSIS_DIR, "qc/multiqc_report.html")]
+        [join(BASE_ANALYSIS_DIR, "qc/multiqc_report.html"),
+         join(BASE_ANALYSIS_DIR, "fpkm/all.xlsx")]
     )
 
 diffexp_files = get_diffxp_files()
