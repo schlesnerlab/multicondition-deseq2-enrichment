@@ -1,5 +1,6 @@
 library(clusterProfiler)
 library(magrittr)
+library(tidyverse)
 
 ## Snakemake header
 
@@ -12,7 +13,7 @@ if (exists("snakemake")) {
   out_file <- snakemake@output[["gsea_result"]]
   organism <- snakemake@config[["organism"]]
 } else {
-  conf <- yaml::read_yaml("../../configs/VascAge_config.yaml")
+  conf <- yaml::read_yaml("./configs/VascAge_config.yaml")
   BASE_ANALYSIS_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
   
   cond_id <- names(conf$diffexp$contrasts)[1]
@@ -53,7 +54,10 @@ joined_df <- joined_df %>%
     contrast_groups[2]
   ))
 
-joined_df$gsea_stat <- joined_df$stat
+#joined_df$gsea_stat <- joined_df$stat
+
+joined_df <- joined_df %>% dplyr::mutate(gsea_stat = -log10(pvalue) * logFoldChange)
+
 gene_list <- joined_df %>% dplyr::select(c(gname, gsea_stat))
 ensemblgene_list <- joined_df %>% dplyr::select(c(gene, gsea_stat))
 de_genes <- joined_df %>%

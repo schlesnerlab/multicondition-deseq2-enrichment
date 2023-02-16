@@ -319,3 +319,51 @@ get_kegg_name <- function(org_name) {
   }
   kegg_name
 }
+
+
+better_dotplot <- function(gset, c_groups = contrast_groups) {
+  pos_gsea <- gset %>% dplyr::filter(NES > 0.5)
+  if (nrow(pos_gsea) > 1) {
+    dp_pos_NES <-
+      dotplot(
+        pos_gsea,
+        size = "NES",
+        color = "p.adjust",
+        showCategory = 50,
+        title = glue::glue("Pathways enriched in {c_groups[1]}")
+      ) +
+      scale_size(range = c(1, 7), limits = c(1, max(gset@result$NES)))
+  } else {
+    dp_pos_NES <- NULL
+  }
+  
+  neg_gsea <- gset %>% dplyr::filter(NES < -0.5)
+  if (nrow(neg_gsea) > 1) {
+    dp_neg_NES <-
+      dotplot(
+        neg_gsea,
+        size = "NES",
+        color = "p.adjust",
+        showCategory = 50,
+        title = glue::glue("Pathways enriched in {c_groups[2]}")
+      ) +
+      scale_size(range = c(7, 1), limits = c(min(gset@result$NES), -1))
+  } else {
+    dp_neg_NES <- NULL
+  }
+  
+  return(list(dp_pos_NES, dp_neg_NES))
+}
+#' Title
+#'
+#' @param d_plot
+#' @param p_group
+#' @param p_path
+#'
+#' @return
+#' @export
+#'
+#' @examples
+save_dotplots <- function(d_plot, p_group, p_path = plot_path, gsea_type) {
+  ggsave(filename = file.path(p_path, glue::glue("{p_group}_{gsea_type}_dplot.svg")), d_plot, width = 10, height = 10)
+}
