@@ -5,7 +5,7 @@ channels:
 dependencies:
   - bioconductor-viper
   # - bioconductor-dorothea (NOTE: DOrothea is broken on bioconda)
-  - bioconductor-omnipathr
+  - bioconductor-decoupler
   - bioconductor-chipseeker
   - bioconductor-deseq2
   - bioconductor-reactomepa
