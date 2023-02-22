@@ -28,8 +28,8 @@ dependencies:
   - r-dt
   - r-devtools
   - bioconductor-complexheatmap
-  - bioconductor-bsgenome.mmusculus.ucsc.mm10
-  - bioconductor-bsgenome.hsapiens.ucsc.hg38
+  #- bioconductor-bsgenome.mmusculus.ucsc.mm10
+  #- bioconductor-bsgenome.hsapiens.ucsc.hg38
   - bioconductor-clusterprofiler
   - r-rmarkdown
   - r-knitr

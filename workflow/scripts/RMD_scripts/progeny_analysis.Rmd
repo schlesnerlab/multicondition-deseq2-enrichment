@@ -36,10 +36,10 @@ if (exists("snakemake")) {
   color_scheme <- snakemake@config[["group_colors"]][[cond_id]]
   organism <- snakemake@config[["organism"]]
 } else {
-  the_yaml <- yaml::read_yaml("../../../configs/VascAge_cre_config.yaml")
-  #snakedir <- "/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment"
-  BASE_ANALYSIS_DIR = the_yaml$dirs$BASE_ANALYSIS_DIR
-  cond_id <- "condition"
+  the_yaml <- yaml::read_yaml("../../../config/STAD.yaml")
+  snakedir <- "/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment"
+  BASE_ANALYSIS_DIR = file.path(snakedir, "data/STAD")
+  cond_id <- "SARIFA_Subtype"
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), 'deseq2/all.rds')
   comp_id <- names(the_yaml$diffexp$contrasts)[1]
   diffexp_tb_path <- file.path(paste0(BASE_ANALYSIS_DIR),
@@ -54,8 +54,7 @@ if (exists("snakemake")) {
 
   comp_groups <- the_yaml$comp_groups
   color_scheme <- the_yaml$group_colors[[cond_id]]
-  organism <- "Mus musculus"
-  
+  organism <- "Homo sapiens"
 }
 dir.create(plot_path, recursive = T)
 
@@ -110,9 +109,12 @@ Activity_counts <- as.vector(PathwayActivity_counts)
 
 
 ann_col <- colData(dds_obj) %>% as_tibble()%>% pull(!!sym(cond_id)) %>% fct_relevel(names(color_scheme))
-
-top_anno <- ComplexHeatmap::HeatmapAnnotation(sample = ann_col, 
+if (!is.null(color_scheme)) {
+  top_anno <- ComplexHeatmap::HeatmapAnnotation(sample = ann_col, 
                                                 col = list("sample" = as_vector(color_scheme)))
+} else {
+  top_anno <- ComplexHeatmap::HeatmapAnnotation(sample = ann_col)
+}
 progeny_hmap <- ComplexHeatmap::Heatmap(t(PathwayActivity_counts), 
                                           top_annotation = top_anno,
                                           clustering_distance_columns = "euclidean",
@@ -145,10 +147,13 @@ for(pathway in kruskal_test$pathway) {
   pval <- kruskal_test %>% dplyr::filter(pathway == !!pathway) %>% pull(padj) 
   p <- ggplot(plot_activity, aes(x = condition, y = !!sym(pathway), fill = condition)) + 
     geom_boxplot(outlier.shape = NA, color = "black") + geom_jitter(width = 0.1) + theme_bw() + 
-    scale_fill_manual(values = as_vector(color_scheme)) +
     geom_hline(yintercept = 0) + ggtitle(pathway) + labs(caption= paste0("kruskal adj.p = ", round(pval, 4))) + ylab("progeny score") + 
     ggsignif::geom_signif(comparisons = comp_groups, 
                           step_increase = 0.06, map_signif_level = T,show.legend = , color = "black")
+  
+  if (!is.null(color_scheme)) {
+    p <- p + scale_fill_manual(values = as_vector(color_scheme))
+  }
   
   ggsave(filename = file.path(plot_path, glue::glue("{pathway}_boxplot.svg")))
   plot(p)
@@ -241,11 +246,14 @@ sample_acts_mat <- sample_acts %>%
 sample_acts_mat <- scale(sample_acts_mat) %>% t()
 sample_acts_mat <- sample_acts_mat[,rownames(dds_obj@colData)]
 
-
-ha <- HeatmapAnnotation(group = dds_obj@colData[, cond_id],
+if (!is.null(color_scheme)) {
+  ha <- HeatmapAnnotation(group = dds_obj@colData[, cond_id],
                         col = list(group = 
                           as_vector(color_scheme))
-)
+  )
+} else {
+    ha <- HeatmapAnnotation(group = dds_obj@colData[, cond_id])
+}
 
 # Plot
 
@@ -272,11 +280,13 @@ for(pathway in kruskal_test$pathway) {
   pval <- kruskal_test %>% dplyr::filter(pathway == !!pathway) %>% pull(padj) 
   p <- ggplot(plot_activity, aes(x = !!sym(cond_id), y = !!sym(pathway), fill = !!sym(cond_id))) + 
     geom_boxplot(outlier.shape = NA, color = "black") + geom_jitter(width = 0.1) + theme_bw() + 
-    scale_fill_manual(values = as_vector(color_scheme)) +
+
     geom_hline(yintercept = 0) + ggtitle(pathway) + labs(caption= paste0("kruskal adj.p = ", round(pval, 4))) + ylab("progeny score") + 
     ggsignif::geom_signif(comparisons = comp_groups, 
                           step_increase = 0.06, map_signif_level = T,show.legend = , color = "black")
-  
+  if (!is.null(color_scheme)) {
+    p <- p +scale_fill_manual(values = as_vector(color_scheme))
+  }
   ggsave(filename = file.path(plot_path, glue::glue("{pathway}_decoupler_boxplot.svg")))
   plot(p)
 }

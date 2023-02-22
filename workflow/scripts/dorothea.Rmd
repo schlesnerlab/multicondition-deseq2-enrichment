@@ -43,19 +43,20 @@ if (exists("snakemake")) {
   color_scheme <- purrr::map(snakemake@config[["group_colors"]], unlist)
   organism <- snakemake@config[["organism"]]
 } else {
-  BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/tec_aplnKO"
+  the_yaml <- yaml::read_yaml("../../config/STAD.yaml")
+
+  BASE_ANALYSIS_DIR <- c(the_yaml$dirs$BASE_ANALYSIS_DIR)
 #  comp_id <- "YECplusA-vs-YEC"
 
 #  contrast_groups <- c("Young-EC_apelin", "Young-EC")
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/all.rds")
   fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
-  samp_map <- "../../data/tumor_vs_ec/Apln_KO.tsv"
+  samp_map <- the_yaml$samples
   plot_path <- "./"
-  the_yaml <- yaml::read_yaml("../../configs/tec_aplnKO.yaml")
   cond_id <- names(the_yaml$diffexp$contrasts)
   comp_groups <- the_yaml$comp_groups
   color_scheme <- purrr::map(the_yaml$group_colors, unlist)
-  organism <- "Mus musculus"
+  organism <- "Homo sapiens"
   }
 if (!dir.exists(plot_path)) {
   dir.create(plot_path)
@@ -90,7 +91,7 @@ rownames(Normalized_counts) <- filer$gname
 expression_matrix <- Normalized_counts
 
 #regulons <- dorothea_mm %>% filter(confidence %in% c("A", "B", "C"))
-sample_overview <- readr::read_tsv(samp_map)
+sample_overview <- colData(dds_file) %>% as_tibble(rownames = "sample")
 
 ```
 
@@ -119,20 +120,22 @@ tf_activities %>%
   t() -> tf_activities
 
 
-plot_doro_hm <- function(dds, cond, color_vec, p_data) {
+plot_doro_hm <- function(dds, cond, color_list, p_data) {
   anno_vec <- dds_file@colData %>% as.data.frame()%>% pull(!!cond)
 
-  col_palette <- RColorBrewer::brewer.pal(length(unique(anno_vec)),
-    name = "Set1"
-  )
 
-  ha <- HeatmapAnnotation(
-  group = anno_vec,
-  col = list(
-    group =
-      as_vector(color_vec)
+  color_vec <- color_list[[cond]]
+  if (!is.null(color_vec)) {
+    ha <- HeatmapAnnotation(
+    group = anno_vec,
+    col = list(
+      group =
+        as_vector(color_vec)
+      )
     )
-  )
+  } else {
+     ha <- HeatmapAnnotation(group = anno_vec)
+  }
 
   ch <- Heatmap(p_data,
   top_annotation = ha,
@@ -148,7 +151,11 @@ plot_doro_hm <- function(dds, cond, color_vec, p_data) {
   ch
 }
 
-purrr::map2(cond_id, color_scheme, plot_doro_hm, dds=dds_file, p_data = tf_activities)
+if (!is.null(color_scheme )) {
+  purrr::map(cond_id, plot_doro_hm, dds=dds_file, p_data = tf_activities, color_list = color_scheme)
+} else {
+  purrr::map(cond_id, plot_doro_hm, dds=dds_file, p_data=tf_activities, color_list = color_scheme)
+}
 ```
 
 The following plots show the mean density distribution of the NES for each sample group, followed by a barplot showing the top enrichment for TF activity in each sample group.
@@ -156,7 +163,7 @@ The y axis shows the TF factor, the x axis the NES.
 
 ```{r, fig.height = 10}
 plot_doro_plots <-  function(tf_activities, dds_file, cond) {
-  mean_tf_activities <- mean_tibble_from_mat(tf_activities,
+  mean_tf_activities <- mean_tibble_from_mat(mat = tf_activities,
                                              contrast_groups = colData(dds_file)[, cond],
                                              s_map = sample_overview, cond_id = cond)
   mean_tf_activities["TF"] <- rownames(tf_activities)
@@ -252,10 +259,14 @@ sample_acts_mat <- sample_acts %>%
   t() 
 
 
-
-purrr::map2(cond_id, color_scheme, plot_doro_hm, 
+if (!is.null(color_scheme )) {
+  purrr::map(cond_id, plot_doro_hm, 
             dds = dds_file, 
-            p_data = t(scale(t(sample_acts_mat), scale = F)))
+            p_data = t(scale(t(sample_acts_mat), scale = F)),color_list = color_scheme)
+} else {
+  purrr::map(cond_id, plot_doro_hm, dds=dds_file, p_data=t(scale(t(sample_acts_mat))), color_list = color_scheme)
+}
+
 ```
 
 

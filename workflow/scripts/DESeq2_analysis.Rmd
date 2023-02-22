@@ -72,11 +72,11 @@ if (exists("snakemake")) {
   organism <- snakemake@config[["organism"]]
   conf <- snakemake@config
 } else {
-  conf <- yaml::read_yaml("../../configs/VascAge_config.yaml")
+  conf <- yaml::read_yaml("./../../config/STAD.yaml")
   BASE_ANALYSIS_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
 
   cond_id <- names(conf$diffexp$contrasts)[1]
-  comp_id <- names(conf$diffexp$contrasts[[cond_id]])[3]
+  comp_id <- names(conf$diffexp$contrasts[[cond_id]])[1]
   contrast_groups <- conf$diffexp$contrasts[[cond_id]][[comp_id]]
   coef_string <- paste0(cond_id,"_", contrast_groups[[1]],"_vs_", contrast_groups[[2]])
   dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/all.rds")
@@ -84,8 +84,9 @@ if (exists("snakemake")) {
     paste0(BASE_ANALYSIS_DIR),
     glue::glue("results/diffexp/{cond_id}/{comp_id}.diffexp.tsv")
   )
-  fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/true_fpkm.tsv")
-  samp_map <- "../../data/Vasc_age2020/Vascage_samples.tsv"
+  fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
+  samp_map <- file.path(conf$samples)
+  #samp_map <- "../../data/Vasc_age2020/Vascage_samples.tsv"
   rld_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/rlog_transform.RDS.gz")
   register(SerialParam())
   plot_path <- "./"
@@ -209,10 +210,13 @@ diff_exp_trans <- SummarizedExperiment::assay(rld)[joined_df$gene, ]
 rownames(diff_exp_trans) <- joined_df$gname
 write(cond_id, file = stderr())
 df_col <- data.frame(SummarizedExperiment::colData(rld)[, c(cond_id)])
-col_annotation <-
-  HeatmapAnnotation(condition = dds_obj@colData[, cond_id],
-                    col = list(condition = group_colors))
 
+if (!is.null(group_colors)) {
+  col_annotation <- HeatmapAnnotation(condition = dds_obj@colData[, cond_id],
+                      col = list(condition = group_colors))
+} else {
+    col_annotation <- HeatmapAnnotation(condition = dds_obj@colData[, cond_id])
+}
 rownames(df_col) <- colnames(SummarizedExperiment::assay(rld))
 colnames(df_col) <- cond_id
 index_vec <- which(joined_df$padj < pvalue_threshold & abs(joined_df$logFoldChange) > LFC_threshold)
@@ -295,9 +299,15 @@ Diff_exp_heatmaps <- list()
 Diff_norm_heatmaps <- list()
 
 
-col_annotation <-
-  HeatmapAnnotation(condition = dds_obj@colData[dds_obj@colData[, cond_id] %in% contrast_groups, cond_id],
+if(!is.null(group_colors)) {
+  col_annotation <-
+    HeatmapAnnotation(condition = dds_obj@colData[dds_obj@colData[, cond_id] %in% 
+                                                    contrast_groups, cond_id],
                     col = list(condition = group_colors))
+} else {
+    col_annotation <- HeatmapAnnotation(condition = dds_obj@colData[dds_obj@colData[, cond_id] %in% 
+                                                    contrast_groups, cond_id])
+}
 
 filtered_join_df <-
   joined_df[] %>% dplyr::filter(padj < pvalue_threshold &
@@ -613,7 +623,7 @@ if (nrow(reactome_stuff) > 1) {
     reactome_stuff,
     foldChange = setNames(object = joined_df$logFoldChange, nm = as.data.frame(geneList)[, 1]),
     node_label = "all",
-    layout = "auto",
+  #  layout = "auto",
     cex_label_category = 0.8,
     cex_label_gene = 0.6
   )
