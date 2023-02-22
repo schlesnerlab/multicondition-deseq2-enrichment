@@ -133,6 +133,7 @@ def get_diffexp_tables(wildcards):
     )
     return output_files
 
+
 def get_fpkm(wildcards):
     if config["DKFZ"]:
         fpkm_file = join(BASE_ANALYSIS_DIR, "fpkm/true_fpkm.tsv")

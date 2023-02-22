@@ -97,8 +97,10 @@ if config["run_carnival"]["sample"]:
 
 if config["DKFZ"]:
     salmon_files.extend(
-        [join(BASE_ANALYSIS_DIR, "qc/multiqc_report.html"),
-         join(BASE_ANALYSIS_DIR, "fpkm/all.xlsx")]
+        [
+            join(BASE_ANALYSIS_DIR, "qc/multiqc_report.html"),
+            join(BASE_ANALYSIS_DIR, "fpkm/all.xlsx"),
+        ]
     )
 
 diffexp_files = get_diffxp_files()
@@ -128,5 +130,7 @@ report: "report/workflow.rst"
 include: "rules/diffexp.smk"
 include: "rules/Carnival.smk"
 
+
 if config["DKFZ"]:
+
     include: "rules/DKFZ.smk"

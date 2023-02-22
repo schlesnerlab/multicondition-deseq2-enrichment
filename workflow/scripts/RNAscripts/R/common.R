@@ -4,7 +4,7 @@
 #' @return A character vector of length two with the contrast split apart
 #' @export
 split_contrast_groups <- function(cont) {
-  stringr::str_split(cont, "-vs-", simplify = T) %>% unlist()
+  stringr::str_split(cont, "-vs-", simplify = TRUE) %>% unlist()
 }
 
 #' Joins the DEseq table and the fpkm read table together
@@ -16,12 +16,13 @@ split_contrast_groups <- function(cont) {
 #' @export
 join_tables <- function(DEseq_tb, fpkm) {
   diff_exp <- DEseq_tb
-
+  
   filer <- fpkm %>%
     dplyr::filter(gene %in% diff_exp$gene_id) %>%
     dplyr::filter(!duplicated(gene))
-  joined_df <- dplyr::inner_join(filer, DEseq_tb, by = c("gene" = "gene_id")) %>% dplyr::arrange(padj)
-
+  joined_df <-
+    dplyr::inner_join(filer, DEseq_tb, by = c("gene" = "gene_id")) %>% dplyr::arrange(padj)
+  
   return(joined_df)
 }
 #' Calculates mean values from the Four groups, which are still hardcoded. and returns
@@ -35,28 +36,33 @@ join_tables <- function(DEseq_tb, fpkm) {
 #' @export
 #' @return tibble with mean values, gene names and padj values
 #' @importFrom magrittr %>%
-mean_tibble_from_mat <- function(mat, extra_col = NULL, contrast_groups = contrast_groups, s_map,cond_id) {
-  mat_tb <- tibble::as_tibble(mat)
-
-  mean_tb <- tibble::tibble(.rows = nrow(mat_tb))
-  for (gr in contrast_groups) {
-    col_n <- s_map %>%
-      dplyr::filter(!!sym(cond_id) == gr) %>%
-      dplyr::pull(sample)
-    mean_tb[[gr]] <- rowMeans(dplyr::select(mat_tb, col_n))
+mean_tibble_from_mat <-
+  function(mat,
+           extra_col = NULL,
+           contrast_groups = contrast_groups,
+           s_map,
+           cond_id) {
+    mat_tb <- tibble::as_tibble(mat)
+    
+    mean_tb <- tibble::tibble(.rows = nrow(mat_tb))
+    for (gr in contrast_groups) {
+      col_n <- s_map %>%
+        dplyr::filter(!!sym(cond_id) == gr) %>%
+        dplyr::pull(sample)
+      mean_tb[[gr]] <- rowMeans(dplyr::select(mat_tb, col_n))
+    }
+    if ("gname" %in% colnames(mat_tb)) {
+      mean_tb["gname"] <- mat_tb %>% dplyr::select("gname")
+    }
+    if ("padj" %in% colnames(mat_tb)) {
+      mean_tb["padj"] <- mat_tb %>% dplyr::select("padj")
+    }
+    if (!is.null(extra_col)) {
+      mean_tb[extra_col] <- mat_tb %>% dplyr::select(extra_col)
+    }
+    
+    mean_tb
   }
-  if ("gname" %in% colnames(mat_tb)) {
-    mean_tb["gname"] <- mat_tb %>% dplyr::select("gname")
-  }
-  if ("padj" %in% colnames(mat_tb)) {
-    mean_tb["padj"] <- mat_tb %>% dplyr::select("padj")
-  }
-  if (!is.null(extra_col)) {
-    mean_tb[extra_col] <- mat_tb %>% dplyr::select(extra_col)
-  }
-
-  mean_tb
-}
 
 
 #' test
@@ -88,18 +94,18 @@ create_overlap_matrix <- function(sig_gene_names) {
   gene_name_index <- unlist(sig_gene_names) %>%
     unique() %>%
     sort()
-
-
-
-  gene_matrix <- sapply(sig_gene_names, check_against_index, index = gene_name_index)
+  
+  
+  
+  gene_matrix <-
+    sapply(sig_gene_names, check_against_index, index = gene_name_index)
   rownames(gene_matrix) <- gene_name_index
-
-  row_sum <- rowSums(gene_matrix)
-
+  
   gene_matrix <- cbind(gene_matrix, total = rowSums(gene_matrix))
-
-  ordered_matrix <- gene_matrix[order(gene_matrix[, "total"], decreasing = T), ]
-
+  
+  ordered_matrix <-
+    gene_matrix[order(gene_matrix[, "total"], decreasing = TRUE), ]
+  
   DT::datatable(ordered_matrix)
 }
 #' filters table so only contrasted samples remain
@@ -111,15 +117,24 @@ create_overlap_matrix <- function(sig_gene_names) {
 #' @param cond_id condition variable set in snakeamek
 #' @return matrix of epxression values
 #' @export
-filter_split_table <- function(rld, contrast_groups, j_df, reorder_genes = TRUE, 
-                               cond_id) {
-  expression_values <- as.data.frame(SummarizedExperiment::assay(rld)[j_df$gene, rld@colData[, cond_id] %in% contrast_groups, drop = F])
-  rownames(expression_values) <- j_df$gname
-  if (reorder_genes) {
-    expression_values <- expression_values[order(abs(j_df$logFoldChange)), ]
+filter_split_table <-
+  function(rld,
+           contrast_groups,
+           j_df,
+           reorder_genes = TRUE,
+           cond_id) {
+    expression_values <-
+      as.data.frame(SummarizedExperiment::assay(rld)[j_df$gene,
+                                                     rld@colData[, cond_id] %in%
+                                                       contrast_groups,
+                                                     drop = FALSE])
+    rownames(expression_values) <- j_df$gname
+    if (reorder_genes) {
+      expression_values <-
+        expression_values[order(abs(j_df$logFoldChange)), ]
+    }
+    expression_values
   }
-  expression_values
-}
 
 #' Save pheatmapplot to svg  file
 #'
@@ -130,7 +145,10 @@ filter_split_table <- function(rld, contrast_groups, j_df, reorder_genes = TRUE,
 #' @return nothing
 #' @importFrom grDevices dev.off svg
 #' @export
-save_pheatmap_svg <- function(x, filename, width = 7, height = 7) {
+save_pheatmap_svg <- function(x,
+                              filename,
+                              width = 7,
+                              height = 7) {
   svglite::svglite(filename, width = width, height = height)
   grid::grid.newpage()
   grid::grid.draw(x$gtable)
@@ -146,7 +164,10 @@ save_pheatmap_svg <- function(x, filename, width = 7, height = 7) {
 #' @return nothing
 #' @importFrom grDevices dev.off svg
 #' @export
-save_plot_svg <- function(x, filename, width = 7, height = 7) {
+save_plot_svg <- function(x,
+                          filename,
+                          width = 7,
+                          height = 7) {
   svglite::svglite(filename, width = width, height = height)
   x
   dev.off()
@@ -162,7 +183,10 @@ save_plot_svg <- function(x, filename, width = 7, height = 7) {
 #' @importFrom grDevices dev.off svg
 #' @import svglite
 #' @export
-save_cheatmap_svg <- function(x, filename, width = 7, height = 7) {
+save_cheatmap_svg <- function(x,
+                              filename,
+                              width = 7,
+                              height = 7) {
   svglite::svglite(filename, width = width, height = height)
   ComplexHeatmap::draw(x)
   dev.off()
@@ -172,19 +196,22 @@ save_cheatmap_svg <- function(x, filename, width = 7, height = 7) {
 #'
 #' @param filepath Path to DESeq2 results object form res saved as tsv
 #'
-#' @return Tibble of DES2 results. 
+#' @return Tibble of DES2 results.
 #' @export
 #'
 #' @examples
 read_deseq_tibble <- function(filepath) {
-  readr::read_tsv(filepath,
-                  col_names = c(
-                    "gene_id",
-                    "baseMean",
-                    "logFoldChange",
-                    "lfcSE", "stat",
-                    "pvalue", "padj"
-                  ),
-                  skip = 1
-  )  
+  readr::read_tsv(
+    filepath,
+    col_names = c(
+      "gene_id",
+      "baseMean",
+      "logFoldChange",
+      "lfcSE",
+      "stat",
+      "pvalue",
+      "padj"
+    ),
+    skip = 1
+  )
 }

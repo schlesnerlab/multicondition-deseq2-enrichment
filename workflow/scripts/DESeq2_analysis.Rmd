@@ -55,49 +55,59 @@ if (exists("snakemake")) {
   cond_id <- snakemake@wildcards[["condition"]]
   write(cond_id, file = stderr())
   contrast_groups <- snakemake@params[["contrast"]]
-  coef_string <- paste0(cond_id,"_", contrast_groups[[1]],"_vs_", contrast_groups[[2]])
+  coef_string <- paste0(
+    cond_id, "_", contrast_groups[[1]], "_vs_",
+    contrast_groups[[2]]
+  )
   samp_map <- snakemake@params[["samples"]]
   lfc_shrink <- snakemake@config[["diffexp"]][["shrink_lfc"]]
   rld_path <- snakemake@input[["rld"]]
   register(MulticoreParam(snakemake@threads))
-  LFC_threshold <- snakemake@config[["diffexp"]][["LFC_threshold"]]
+  lfc_threshold <- snakemake@config[["diffexp"]][["lfc_threshold"]]
   pvalue_threshold <- snakemake@config[["diffexp"]][["pval_threshold"]]
   plot_path <- snakemake@params[["plot_path"]]
   group_colors <- snakemake@config[["group_colors"]][[cond_id]] %>% unlist()
   if (!is.null(snakemake@config[["diffexp"]][["custom_model"]][[cond_id]])) {
     model_string <- snakemake@config[["diffexp"]][["custom_model"]][[cond_id]]
   } else {
-    model_string <-  snakemake@config[["diffexp"]][["model"]] 
+    model_string <- snakemake@config[["diffexp"]][["model"]]
   }
   organism <- snakemake@config[["organism"]]
   conf <- snakemake@config
 } else {
   conf <- yaml::read_yaml("./../../config/STAD.yaml")
-  BASE_ANALYSIS_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
+  base_analysis_dir <- file.path(conf$dirs$base_analysis_dir)
 
   cond_id <- names(conf$diffexp$contrasts)[1]
   comp_id <- names(conf$diffexp$contrasts[[cond_id]])[1]
   contrast_groups <- conf$diffexp$contrasts[[cond_id]][[comp_id]]
-  coef_string <- paste0(cond_id,"_", contrast_groups[[1]],"_vs_", contrast_groups[[2]])
-  dds_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/all.rds")
+  coef_string <- paste0(
+    cond_id, "_", contrast_groups[[1]], "_vs_",
+    contrast_groups[[2]]
+  )
+  dds_path <- file.path(paste0(base_analysis_dir), "deseq2/all.rds")
   diffexp_tb_path <- file.path(
-    paste0(BASE_ANALYSIS_DIR),
+    paste0(base_analysis_dir),
     glue::glue("results/diffexp/{cond_id}/{comp_id}.diffexp.tsv")
   )
-  fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
+  fpkm_path <- file.path(base_analysis_dir, "fpkm/all.tsv")
   samp_map <- file.path(conf$samples)
-  #samp_map <- "../../data/Vasc_age2020/Vascage_samples.tsv"
-  rld_path <- file.path(paste0(BASE_ANALYSIS_DIR), "deseq2/rlog_transform.RDS.gz")
+  rld_path <- file.path(
+    paste0(base_analysis_dir),
+    "deseq2/rlog_transform.RDS.gz"
+  )
   register(SerialParam())
   plot_path <- "./"
-  LFC_threshold <- 0.5
+  lfc_threshold <- 0.5
   pvalue_threshold <- 0.05
-  enrich_list <- file.path(BASE_ANALYSIS_DIR, 
-                           glue::glue("results/diffexp/{cond_id}/{comp_id}.gseares.RDS"))
- 
+  enrich_list <- file.path(
+    base_analysis_dir,
+    glue::glue("results/diffexp/{cond_id}/{comp_id}.gseares.RDS")
+  )
+
   group_colors <- conf[["group_colors"]][[cond_id]] %>% unlist()
   organism <- conf$organism
-  lfc_shrink <- T
+  lfc_shrink <- TRUE
   model_string <- "~ condition"
 }
 
@@ -109,7 +119,6 @@ rld <- readRDS(rld_path)
 enrich_list <- readRDS(enrich_list)
 
 fpkm <- readr::read_tsv(fpkm_path)
-
 ```
 
 ## DESeq 2 Differential expression analysis
@@ -121,7 +130,7 @@ The DESeq2 analysis approach is described [here](https://genomebiology.biomedcen
 
 The table below lists the top 
 Further we use the DEseq2 rlog transformation to normalize read counts for plotting and downstream
-analysis. A significance level p-value of `r pvalue_threshold` is used. Additonally only genes with a Log fold change higher than `r LFC_threshold`
+analysis. A significance level p-value of `r pvalue_threshold` is used. Additonally only genes with a Log fold change higher than `r lfc_threshold`
 are deemed significant.
 
 All resulting plots are also exported as a svg file. 
@@ -135,26 +144,30 @@ showing the results of the MAPlot depending on if logFoldShrinkage has been perf
 ```{r MAPlot}
 if (!is.null(conf$diffexp$custom_model[[cond_id]])) {
   model_string <- conf$diffexp$custom_model[[cond_id]]
-  # Rerun deseq since it was intialized 
+  # Rerun deseq since it was intialized
   for (x in names(conf[["diffexp"]][["contrasts"]])) {
-    colData(dds_obj)[,x] <- as.factor(colData(dds_obj)[,x]) 
+    colData(dds_obj)[, x] <- as.factor(colData(dds_obj)[, x])
   }
-  colData(dds_obj)[,cond_id] <- as.factor(colData(dds_obj)[,cond_id])
+  colData(dds_obj)[, cond_id] <- as.factor(colData(dds_obj)[, cond_id])
   design(dds_obj) <- as.formula(model_string)
   dds_obj <- DESeq(dds_obj)
-  dds_obj@colData[,cond_id] <- relevel(dds_obj@colData[,cond_id], ref = contrast_groups[2])
-
+  dds_obj@colData[, cond_id] <- relevel(dds_obj@colData[, cond_id],
+    ref = contrast_groups[2]
+  )
 }
-if (lfc_shrink){
-  dds_obj@colData[,cond_id] <- relevel(dds_obj@colData[,cond_id], ref = contrast_groups[2])
+if (lfc_shrink) {
+  dds_obj@colData[, cond_id] <- relevel(dds_obj@colData[, cond_id],
+    ref = contrast_groups[2]
+  )
   design(dds_obj) <- as.formula(model_string)
   dds_obj <- DESeq(dds_obj)
   write(coef_string, file = stderr())
-  res <- lfcShrink(dds_obj, coef = stringr::str_replace_all(coef_string,"-","."),type = "apeglm")
-  #plotMA(res) -> t
-} else{
+  res <- lfcShrink(dds_obj,
+    coef = stringr::str_replace_all(coef_string, "-", "."),
+    type = "apeglm"
+  )
+} else {
   res <- results(dds_obj, contrast = c(cond_id, contrast_groups))
- # plotMA(res)
 }
 DESeq2::plotMA(res)
 ```
@@ -164,7 +177,7 @@ DESeq2::plotMA(res)
 
 sample_overview <- readr::read_tsv(samp_map)
 
-aged_vs_agEC_tb <- readr::read_tsv(diffexp_tb_path,
+deseq_tb <- readr::read_tsv(diffexp_tb_path,
   col_names = c(
     "gene_id",
     "baseMean",
@@ -175,20 +188,21 @@ aged_vs_agEC_tb <- readr::read_tsv(diffexp_tb_path,
   skip = 1
 )
 
-sample_overview <- sample_overview %>% dplyr::filter(sample %in% rownames(colData(dds_obj)))
+sample_overview <- sample_overview %>%
+  dplyr::filter(sample %in% rownames(colData(dds_obj)))
 
+filer <- fpkm %>% dplyr::filter(gene %in% deseq_tb$gene_id)
 
-filer <- fpkm %>% dplyr::filter(gene %in% aged_vs_agEC_tb$gene_id)
+joined_df <- join_tables(deseq_tb, filer)
 
-joined_df <- join_tables(aged_vs_agEC_tb, filer)
-
-joined_df <- joined_df %>% dplyr::mutate(overexpressed_in = ifelse(logFoldChange > 0,
-  contrast_groups[1], contrast_groups[2]
-))
+joined_df <- joined_df %>%
+  dplyr::mutate(overexpressed_in = ifelse(logFoldChange > 0,
+    contrast_groups[1], contrast_groups[2]
+  ))
 
 mean_tb <- joined_df %>%
   dplyr::filter(padj < pvalue_threshold &
-    abs(logFoldChange) > LFC_threshold) %>%
+    abs(logFoldChange) > lfc_threshold) %>%
   RNAscripts::mean_tibble_from_mat(., "logFoldChange",
     contrast_groups = contrast_groups,
     s_map = sample_overview, cond_id = cond_id
@@ -212,24 +226,37 @@ write(cond_id, file = stderr())
 df_col <- data.frame(SummarizedExperiment::colData(rld)[, c(cond_id)])
 
 if (!is.null(group_colors)) {
-  col_annotation <- HeatmapAnnotation(condition = dds_obj@colData[, cond_id],
-                      col = list(condition = group_colors))
+  col_annotation <- HeatmapAnnotation(
+    condition = dds_obj@colData[, cond_id],
+    col = list(condition = group_colors)
+  )
 } else {
-    col_annotation <- HeatmapAnnotation(condition = dds_obj@colData[, cond_id])
+  col_annotation <- HeatmapAnnotation(condition = dds_obj@colData[, cond_id])
 }
 rownames(df_col) <- colnames(SummarizedExperiment::assay(rld))
 colnames(df_col) <- cond_id
-index_vec <- which(joined_df$padj < pvalue_threshold & abs(joined_df$logFoldChange) > LFC_threshold)
+index_vec <- which(joined_df$padj < pvalue_threshold &
+  abs(joined_df$logFoldChange) > lfc_threshold)
 diff_exp_genes <- diff_exp_trans[index_vec, ]
-small_joined_df <- joined_df[joined_df$padj < pvalue_threshold & abs(joined_df$logFoldChange) > LFC_threshold, , ]
+small_joined_df <- joined_df[joined_df$padj < pvalue_threshold &
+  abs(joined_df$logFoldChange) > lfc_threshold, ]
 small_joined_df <- na.omit(small_joined_df)
 
 if (nrow(small_joined_df) > 1) {
-  scaled_diffexp <- diff_exp_genes# - rowMeans(diff_exp_genes)
-  diffexp_heatmap <- Heatmap(head(scaled_diffexp[order(abs(small_joined_df$logFoldChange * -log10(small_joined_df$padj)), decreasing = T), ], 50),
-    top_annotation = col_annotation
+  scaled_diffexp <- diff_exp_genes
+  diffexp_heatmap <- Heatmap(head(scaled_diffexp[order(
+    abs(small_joined_df$logFoldChange * -log10(small_joined_df$padj)),
+    decreasing = TRUE
+  ), ], 50),
+  top_annotation = col_annotation
   )
-  save_cheatmap_svg(x = diffexp_heatmap, filename = file.path(plot_path, "diffexp_heatmap.svg"))
+  save_cheatmap_svg(
+    x = diffexp_heatmap,
+    filename = file.path(
+      plot_path,
+      "diffexp_heatmap.svg"
+    )
+  )
   diffexp_heatmap
 }
 ```
@@ -247,9 +274,12 @@ volcano_plot <- EnhancedVolcano(as.data.frame(joined_df),
   y = "padj",
   title = paste(contrast_groups, collapse = "_vs_"),
   pCutoff = 10e-3,
-  ylab = bquote(~ -Log[10] ~ italic(Padj)), FCcutoff = LFC_threshold
+  ylab = bquote(~ -Log[10] ~ italic(Padj)), FCcutoff = lfc_threshold
 )
-ggsave(filename = file.path(plot_path, "Volcano_plot.svg"), plot = volcano_plot)
+ggsave(
+  filename = file.path(plot_path, "Volcano_plot.svg"),
+  plot = volcano_plot
+)
 
 volcano_plot
 ```
@@ -266,94 +296,103 @@ The Red and blue heatmaps show the gene expression normalized by the mean expres
 
 ```{r centered heatmap, fig.width = 14,fig.height =12}
 
-	#' Uniquify a vector
-	#'             
-	#' @param x Input factor to check
-	#' @return corrected facotr value  
-	#' @examples 
-	#' NULL
+#' Uniquify a vector
+#'
+#' @param x Input factor to check
+#' @return corrected facotr value
+#' @examples
+#' NULL
 uniquify <- function(x) {
-	  if (length(x) == 1){
-	    x
-	  } else {
-	    sprintf("%s_%02d", x, seq_along(x))
-	  }
+  if (length(x) == 1) {
+    x
+  } else {
+    sprintf("%s_%02d", x, seq_along(x))
+  }
 }
 
-	#' Disambiguate a vector        
-	#'                                                                 
-	#' Add numbered suffixes to redundant entries in a vector         
-	#'                                                               
-	#' @param in_vector Vector to be disambiguated
-	#' @importFrom stats ave
-	#' @return The disambiguated vector.
-	#' @export                        
-	#'                                 
-	#' @examples                     
-	#'  NULL                        
-	#'                             
-disambiguateVector <- function(in_vector){
-	  ave(in_vector, in_vector, FUN = uniquify)
-}                        
-Diff_exp_heatmaps <- list()
-Diff_norm_heatmaps <- list()
+#' Disambiguate a vector
+#'
+#' Add numbered suffixes to redundant entries in a vector
+#'
+#' @param in_vector Vector to be disambiguated
+#' @importFrom stats ave
+#' @return The disambiguated vector.
+#' @export
+#'
+#' @examples
+#' NULL
+#'
+disambiguate_vector <- function(in_vector) {
+  ave(in_vector, in_vector, FUN = uniquify)
+}
+diff_exp_heatmaps <- list()
+diff_norm_heatmaps <- list()
 
 
-if(!is.null(group_colors)) {
+if (!is.null(group_colors)) {
   col_annotation <-
-    HeatmapAnnotation(condition = dds_obj@colData[dds_obj@colData[, cond_id] %in% 
-                                                    contrast_groups, cond_id],
-                    col = list(condition = group_colors))
+    HeatmapAnnotation(
+      condition = dds_obj@colData[dds_obj@colData[, cond_id] %in%
+        contrast_groups, cond_id],
+      col = list(condition = group_colors)
+    )
 } else {
-    col_annotation <- HeatmapAnnotation(condition = dds_obj@colData[dds_obj@colData[, cond_id] %in% 
-                                                    contrast_groups, cond_id])
+  col_annotation <- HeatmapAnnotation(
+    condition = dds_obj@colData[dds_obj@colData[, cond_id] %in%
+      contrast_groups, cond_id]
+  )
 }
 
 filtered_join_df <-
   joined_df[] %>% dplyr::filter(padj < pvalue_threshold &
-                                  abs(logFoldChange) > LFC_threshold)
+    abs(logFoldChange) > lfc_threshold)
 # Since it can happen that duplicate gene names appear -> uplicates are marked
 
-filtered_join_df$gname <- disambiguateVector(filtered_join_df$gname)
+filtered_join_df$gname <- disambiguate_vector(filtered_join_df$gname)
 
 s_table <-
-  filter_split_table(rld, contrast_groups, filtered_join_df, 
-                     reorder_genes = FALSE, 
-                     cond_id = cond_id)
+  filter_split_table(rld, contrast_groups, filtered_join_df,
+    reorder_genes = FALSE,
+    cond_id = cond_id
+  )
 r_means <- rowMeans(s_table)
 r_sds <- apply(s_table, 1, sd)
 s_table_centered <- s_table - r_means
 s_table_norm <- t(scale(t(s_table)))
 
 
-Diff_exp_heatmaps <- ComplexHeatmap::Heatmap(
+
+diff_exp_heatmaps <- ComplexHeatmap::Heatmap(
   s_table_centered,
-  cluster_rows = T,
+  cluster_rows = TRUE,
   top_annotation = col_annotation,
-#  column_title = paste0("overexpressed in ", cont),
   name = "Centered exp.",
   row_split = filtered_join_df$overexpressed_in,
-  # col = viridis::viridis(100),
   column_names_rot = 45,
-  show_row_names =  nrow(s_table_norm) < 100,
+  show_row_names = nrow(s_table_norm) < 100,
 )
-Diff_norm_heatmaps <- ComplexHeatmap::Heatmap(
+diff_norm_heatmaps <- ComplexHeatmap::Heatmap(
   s_table_norm,
-  cluster_rows = T,
-#  column_title = paste0("overexpressed in ", cont),
+  cluster_rows = TRUE,
   top_annotation = col_annotation,
   name = "z-score exp.",
   column_names_rot = 45,
   show_row_names = nrow(s_table_norm) < 100
 )
 
-if (nrow(filtered_join_df) >0) {
-  save_cheatmap_svg(Diff_exp_heatmaps, file.path(plot_path,"split_heatmap.svg"), width = 14, height = 12)
+if (nrow(filtered_join_df) > 0) {
+  save_cheatmap_svg(diff_exp_heatmaps,
+    file.path(plot_path, "split_heatmap.svg"),
+    width = 14, height = 12
+  )
 
-  save_cheatmap_svg(Diff_norm_heatmaps, file.path( "standard_redblue_heatmap.svg"), width = 14, height = 12)
+  save_cheatmap_svg(diff_norm_heatmaps,
+    file.path("standard_redblue_heatmap.svg"),
+    width = 14, height = 12
+  )
 
-  plot(Diff_exp_heatmaps)
-  plot(Diff_norm_heatmaps)
+  plot(diff_exp_heatmaps)
+  plot(diff_norm_heatmaps)
 }
 ```
 
@@ -379,8 +418,8 @@ kegg <- enrich_list$kegg
 
 reactome_stuff <- enrich_list$reactome_stuff
 
-ensemblgeneList <- joined_df %>% dplyr::select(c(gene, stat))
-geneList <- joined_df %>% dplyr::select(c(gname, stat))
+ensembl_gene_list <- joined_df %>% dplyr::select(c(gene, stat))
+gene_list <- joined_df %>% dplyr::select(c(gname, stat))
 ```
 
 
@@ -414,24 +453,19 @@ org_db <- get_org_db(organism)
 
 do_gseaplots <- function(enrich_res, gene_stats = NULL, id_class = "ENTREZID") {
   if (nrow(enrich_res) > 1) {
-    if (id_class != "SYMBOL") {
-      enrich_read <- clusterProfiler::setReadable(enrich_res, org_db, id_class)
-    } else {
-      enrich_read <- enrich_res
-    }
-    #  y <- enrichplot::heatplot(enrich_read, showCategory = 10, foldChange = gene_stats)
     z <- enrichplot::upsetplot(enrich_res)
 
     return(list("upset" = z))
   }
 }
 plot_pathways <- function(fgsea_res, pathways_list, gene_ranks) {
-  topPathwaysUp <- fgsea_res[ES > 0][head(order(pval), n = 10), pathway]
-  topPathwaysDown <- fgsea_res[ES < 0][head(order(pval), n = 10), pathway]
-  topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
+  top_pathways_up <- fgsea_res[ES > 0][head(order(pval), n = 10), pathway]
+  top_pathways_down <- fgsea_res[ES < 0][head(order(pval), n = 10), pathway]
+  top_pathways <- c(top_pathways_up, rev(top_pathways_down))
   p <- fgsea::plotGseaTable(
-    pathways = pathways_list[topPathways], stats = gene_ranks, fgseaRes = fgsea_res,
-    gseaParam = 0.2, render = F
+    pathways = pathways_list[top_pathways], stats = gene_ranks,
+    fgseaRes = fgsea_res,
+    gseaParam = 0.2, render = FALSE
   )
   p
 }
@@ -439,7 +473,7 @@ plot_pathways <- function(fgsea_res, pathways_list, gene_ranks) {
 better_dotplot <- function(gset, c_groups = contrast_groups) {
   pos_gsea <- gset %>% dplyr::filter(NES > 0.5)
   if (nrow(pos_gsea) > 1) {
-    dp_pos_NES <-
+    dp_pos_nes <-
       dotplot(
         pos_gsea,
         size = "NES",
@@ -449,12 +483,12 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
       ) +
       scale_size(range = c(1, 7), limits = c(1, max(gset@result$NES)))
   } else {
-    dp_pos_NES <- NULL
+    dp_pos_nes <- NULL
   }
 
   neg_gsea <- gset %>% dplyr::filter(NES < -0.5)
   if (nrow(neg_gsea) > 1) {
-    dp_neg_NES <-
+    dp_neg_nes <-
       dotplot(
         neg_gsea,
         size = "NES",
@@ -464,10 +498,10 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
       ) +
       scale_size(range = c(7, 1), limits = c(min(gset@result$NES), -1))
   } else {
-    dp_neg_NES <- NULL
+    dp_neg_nes <- NULL
   }
 
-  return(list(dp_pos_NES, dp_neg_NES))
+  return(list(dp_pos_nes, dp_neg_nes))
 }
 
 #' Title
@@ -481,24 +515,35 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
 #'
 #' @examples
 save_dotplots <- function(d_plot, p_group, p_path = plot_path, gsea_type) {
-  ggsave(filename = file.path(p_path, glue::glue("{p_group}_{gsea_type}_dplot.svg")), d_plot, width = 10, height = 10)
+  ggplot::ggsave(filename = file.path(p_path,
+                              glue::glue("{p_group}_{gsea_type}_dplot.svg")),
+         d_plot, width = 10, height = 10)
 }
 cat("### ", "msigdb gsea", " \n")
 
-x <- do_gseaplots(msig_gsea, setNames(object = joined_df$logFoldChange, 
-                                      nm = str_extract(joined_df$gene, 
-                                                       pattern = "ENS[A-Z0-9]*")), id_class = "ENSEMBL")
+x <- do_gseaplots(msig_gsea, setNames(
+  object = joined_df$logFoldChange,
+  nm = str_extract(joined_df$gene,
+    pattern = "ENS[A-Z0-9]*"
+  )
+), id_class = "ENSEMBL")
 
 x
 msig_set <- clusterProfiler::setReadable(msig_gsea, org_db, "ENSEMBL")
 if (nrow(msig_gsea) > 1) {
-  enriched_plot <- plot_enrichment(msig_gsea@result, X = "ID", Y = "NES", pval = "p.adjust")
-  ggsave(filename = file.path(plot_path, paste0(contrast_groups[1], "_vs_", contrast_groups[2], "_msig_gsea_enrichplot.svg")))
+  enriched_plot <- plot_enrichment(msig_gsea@result,
+    X = "ID", Y = "NES",
+    pval = "p.adjust"
+  )
+  ggsave(filename = file.path(plot_path, paste0(
+    contrast_groups[1], "_vs_",
+    contrast_groups[2],
+    "_msig_gsea_enrichplot.svg"
+  )))
   plot(enriched_plot)
-  f_changes <- ensemblgeneList
+  f_changes <- ensembl_gene_list
   f_changes$gene <- f_changes$gene %>% stringr::str_extract(., "^ENS[A-Z0-9]*")
-  # dotplot(msig_gsea %>% dplyr::filter(NES > 0), size = "NES" ,color = "p.adjust", showCategory = 50,  title = glue::glue("Pathways enriched in {contrast_groups[1]}")) +   scale_size(range=c(1, 7))
-  # dotplot(msig_gsea %>% dplyr::filter(NES < 0), color = "p.adjust", showCategory = 50 ,title =  glue::glue("Pathways enriched in {contrast_groups[2]}"))  better_dotplot(msig_gsea, c_groups = contrast_groups)
+
   dplot <- better_dotplot(msig_gsea, c_groups = contrast_groups)
   purrr::map2(dplot, contrast_groups, save_dotplots, gsea_type = "msigdb")
   dplot
@@ -511,13 +556,20 @@ if (nrow(msig_gsea) > 1) {
 if (nrow(msig_set) > 1) {
   cnetplot <- cnetplot(
     msig_set,
-    foldChange = set_names(joined_df$logFoldChange, geneList$gname),
+    foldChange = set_names(joined_df$logFoldChange, gene_list$gname),
     node_label = "all",
     layout = "nicely",
     cex_label_category = 0.8,
     cex_label_gene = 0.6
   )
-  ggsave(filename = file.path(plot_path, paste0(contrast_groups[1], "_vs_", contrast_groups[2], "_msig_gsea_cnet.svg")), cnetplot, width = 16, height = 16)
+  ggsave(
+    filename = file.path(plot_path, paste0(
+      contrast_groups[1],
+      "_vs_", contrast_groups[2],
+      "_msig_gsea_cnet.svg"
+    )),
+    cnetplot, width = 16, height = 16
+  )
   cnetplot
 }
 ```
@@ -530,10 +582,19 @@ cat("### ", "MSigDB ORA", " \n")
 cat("\n Plot")
 
 if (!is.null(msig_enrichment)) {
-  do_gseaplots(msig_enrichment, setNames(object = as.data.frame(DEgenes)[, 3], nm = as.data.frame(DEgenes)[, 1]), id_class = "ENSEMBL") %>% purrr::map(plot)
+  do_gseaplots(msig_enrichment,
+    setNames(
+      object = as.data.frame(DEgenes)[, 3],
+      nm = as.data.frame(DEgenes)[, 1]
+    ),
+    id_class = "ENSEMBL"
+  ) %>% purrr::map(plot)
 
   if (nrow(msig_enrichment) > 1) {
-    msig_enrichment <- clusterProfiler::setReadable(msig_enrichment, org_db, "ENSEMBL")
+    msig_enrichment <- clusterProfiler::setReadable(
+      msig_enrichment,
+      org_db, "ENSEMBL"
+    )
     dotplot(msig_enrichment)
   } else {
     print("no msig enrichments")
@@ -547,7 +608,8 @@ if (!is.null(msig_enrichment)) {
   if (nrow(msig_enrichment) > 1) {
     cnetplot(
       msig_enrichment,
-      foldChange = setNames(object = joined_df$logFoldChange, nm = as.data.frame(geneList)[, 1]),
+      foldChange = setNames(object = joined_df$logFoldChange,
+                            nm = as.data.frame(gene_list)[, 1]),
       node_label = "all",
       layout = "nicely",
       cex_label_category = 0.8,
@@ -565,15 +627,25 @@ The following plots were generated against the KEGG pathway database in mice.
 
 ```{r KEGG plots, fig.width = 10,fig.height =10}
 library(dplyr)
-dupfree_geneList <- geneList[!duplicated(geneList$gname), ]
+dupfree_gene_list <- gene_list[!duplicated(gene_list$gname), ]
 
 if (nrow(kegg@result) > 1) {
   kegg <- clusterProfiler::setReadable(kegg, org_db, "ENTREZID")
-  # clusterProfiler::cnetplot(kegg, foldChange = get_entrezgene_vector(dupfree_geneList))
-  p <- plot_enrichment(kegg@result, X = "Description", Y = "NES", pval = "p.adjust", pval_threshold = 0.1) + ggtitle(glue::glue("KEGG {contrast_groups[1]}_vs_{contrast_groups[2]}"))
-  ggsave(filename = file.path(plot_path, glue::glue("{contrast_groups[1]}_vs_{contrast_groups[2]}_KEGG_enrichment.svg")), p)
+
+  p <- plot_enrichment(kegg@result,
+    X = "Description", Y = "NES",
+    pval = "p.adjust", pval_threshold = 0.1
+  ) +
+    ggtitle(glue::glue("KEGG {contrast_groups[1]}_vs_{contrast_groups[2]}"))
+  ggsave(
+    filename = file.path(
+      plot_path,
+      glue::glue("{contrast_groups[1]}_vs_{contrast_groups[2]}_KEGG_enrichment.svg")
+    ),
+    p
+  )
   plot(p)
-  # do_gseaplots(kegg) %>% purrr::map(plot)
+
 
   keg_dplot <- better_dotplot(kegg, c_groups = contrast_groups)
   purrr::map2(keg_dplot, contrast_groups, save_dotplots, gsea_type = "KEGG")
@@ -586,13 +658,23 @@ if (nrow(kegg@result) > 1) {
 if (nrow(kegg) > 1) {
   cnet_kegg <- cnetplot(
     kegg,
-    foldChange = setNames(object = joined_df$logFoldChange, nm = as.data.frame(geneList)[, 1]),
+    foldChange = setNames(
+      object = joined_df$logFoldChange,
+      nm = as.data.frame(gene_list)[, 1]
+    ),
     node_label = "all",
-    #  layout = "auto",
+
     cex_label_category = 0.8,
     cex_label_gene = 0.6
   )
-  ggsave(filename = file.path(plot_path, paste0(contrast_groups[1], "_vs_", contrast_groups[2], "_kegg_gsea_cnet.svg")), cnet_kegg, width = 16, height = 16)
+  ggsave(
+    filename = file.path(plot_path, paste0(
+      contrast_groups[1],
+      "_vs_", contrast_groups[2],
+      "_kegg_gsea_cnet.svg"
+    )),
+    cnet_kegg, width = 16, height = 16
+  )
   cnet_kegg
 }
 ```
@@ -602,11 +684,21 @@ if (nrow(kegg) > 1) {
 
 ```{r reactomeplots,  fig.width = 10,fig.height =14}
 print("reactome")
-# do_gseaplots(reactome_stuff)#, setNames(object = joined_df$logFoldChange, nm = as.data.frame(geneList)[,1]))
+
 if (nrow(reactome_stuff@result) > 1) {
   reactome_stuff <- clusterProfiler::setReadable(reactome_stuff, org_db, "ENTREZID")
-  e_plot <- plot_enrichment(reactome_stuff@result, X = "Description", Y = "NES", pval = "p.adjust", pval_threshold = 0.05)
-  ggsave(filename = file.path(plot_path, glue::glue("{contrast_groups[1]}_vs_{contrast_groups[2]}_reactome_enrichpot.svg")), e_plot)
+  e_plot <- plot_enrichment(reactome_stuff@result,
+    X = "Description",
+    Y = "NES",
+    pval = "p.adjust", pval_threshold = 0.05
+  )
+  ggsave(
+    filename = file.path(
+      plot_path,
+      glue::glue("{contrast_groups[1]}_vs_{contrast_groups[2]}_reactome_enrichlpot.svg")
+    ),
+    e_plot
+  )
   e_plot
 
   reac_dplot <- better_dotplot(reactome_stuff, c_groups = contrast_groups)
@@ -621,13 +713,23 @@ if (nrow(reactome_stuff@result) > 1) {
 if (nrow(reactome_stuff) > 1) {
   reactome_cnet <- clusterProfiler::cnetplot(
     reactome_stuff,
-    foldChange = setNames(object = joined_df$logFoldChange, nm = as.data.frame(geneList)[, 1]),
+    foldChange = setNames(
+      object = joined_df$logFoldChange,
+      nm = as.data.frame(gene_list)[, 1]
+    ),
     node_label = "all",
-  #  layout = "auto",
     cex_label_category = 0.8,
     cex_label_gene = 0.6
   )
-  ggsave(filename = file.path(plot_path, paste0(contrast_groups[1], "_vs_", contrast_groups[2], "_reactome_gsea_cnet.svg")), reactome_cnet, width = 16, height = 16)
+  ggsave(
+    filename = file.path(plot_path, paste0(
+      contrast_groups[1],
+      "_vs_",
+      contrast_groups[2],
+      "_reactome_gsea_cnet.svg"
+    )),
+    reactome_cnet, width = 16, height = 16
+  )
   reactome_cnet
 }
 ```

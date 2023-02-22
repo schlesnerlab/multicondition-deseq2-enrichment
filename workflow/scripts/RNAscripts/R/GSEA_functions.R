@@ -3,13 +3,13 @@
 #'
 #' @param gene_names vecotr of gene symbols to be converted
 #' @param input_type String denoting the type of input given based on \link[org.Mm.eg.db]{org.Mm.eg.db}
-#' @param org_db org db package for the organism analyzed during workflow. 
+#' @param org_db org db package for the organism analyzed during workflow.
 #' @return table of gene names to entrezgene ids
 #' @export
 #' @examples
 #' get_entrezgenes_from_ensembl(c("Aplnr"), org_db = org.Mm.eg.db::org.Mm.eg.db)
 get_entrezgenes_from_ensembl <- function(gene_names, input_type = "SYMBOL",
-                                          org_db) {
+                                         org_db) {
   if (input_type == "ENSEMBL") {
     gene_names <- stringr::str_extract(string = gene_names, "^ENS[A-Z0-9]*")
   }
@@ -25,7 +25,7 @@ get_entrezgenes_from_ensembl <- function(gene_names, input_type = "SYMBOL",
 #'
 #' @param gene_tb data.frame like object with first col gene names and second col LFC values
 #' @param input_type String denoting the type of input given based on \link[org.Mm.eg.db]{org.Mm.eg.db}
-#' @param org_db org db package for the organism analyzed during workflow. 
+#' @param org_db org db package for the organism analyzed during workflow.
 #' @return a named vector of column 2 with names from column 1
 #'
 #' @importFrom magrittr %>%
@@ -38,9 +38,8 @@ get_entrezgene_vector <- function(gene_tb, input_type = "SYMBOL", org_db) {
   eg <- get_entrezgenes_from_ensembl(gene_tb[, 1], input_type, org_db = org_db)
   rownames(gene_tb) <- gene_tb[, 1]
   gene_tb <- gene_tb[eg[, 1], ]
-  # gene_tb <- gene_tb %>%  dplyr::filter(gene_tb[,1] %in% eg[,c(input_type)])
-
-  gene_ranks <- stats::setNames(gene_tb[, 2], nm = eg$ENTREZID) %>% sort(decreasing = T)
+  gene_ranks <- stats::setNames(gene_tb[, 2], nm = eg$ENTREZID) %>% 
+    sort(decreasing = TRUE)
   gene_ranks
 }
 
@@ -65,7 +64,6 @@ table_to_list <- function(tb, ref_col, val_col) {
 #' @param gene2id Translation table from \link{table_to_list}
 #' @export
 transform_glist <- function(gene_set, gene2id) {
-  # gene_tb[,1] <- stringr::str_extract(string = gene_tb[,1], "^ENS[A-Z0-9]*")
 
   index <- gene_set %>% dplyr::pull(2)
   self_hatred <- gene2id[as.character(index)]
@@ -111,9 +109,11 @@ over_rep_test <- function(DE_genes, T2G, universe, input_type = "ENSEMBL", ...) 
 gsea_test <- function(DE_genes, T2G, input_type = "gene_symbol", ...) {
   DE_genes <- as.data.frame(DE_genes)
   if (input_type == "ENSEMBL") {
-    DE_genes[, 1] <- stringr::str_extract(string = DE_genes %>% dplyr::pull(1), "^ENS[A-Z0-9]*")
+    DE_genes[, 1] <- stringr::str_extract(string = DE_genes %>% 
+                                            dplyr::pull(1), "^ENS[A-Z0-9]*")
   }
-  glist <- stats::setNames(DE_genes[, 2], nm = DE_genes[, 1]) %>% sort(decreasing = T)
+  glist <- stats::setNames(DE_genes[, 2], nm = DE_genes[, 1]) %>% 
+    sort(decreasing = TRUE)
   enrichment_result <- clusterProfiler::GSEA(
     geneList = glist,
     TERM2GENE = as.data.frame(T2G),
@@ -177,7 +177,7 @@ run_msig_enricher <- function(gset_list, category = NULL, species = "Mus musculu
 #' @param DE_tb Data.frame like object of col 1 gene symbols, col2 LFC values
 #' @param input_type String denoting the type of input given based on \link[org.Mm.eg.db]{org.Mm.eg.db}
 #' @param p_valcut Cutoff passed to gseKEGG
-#' @param species Name of species analyzed in workflow 
+#' @param species Name of species analyzed in workflow
 #' @return \link[clusterProfiler]{gseKEGG}
 #' @importFrom magrittr %>%
 #' @export
@@ -187,15 +187,17 @@ run_gsea <- function(DE_tb, input_type, p_valcut = 0.05, species) {
     DE_tb[, 1] <- stringr::str_extract(string = DE_tb[, 1], "^ENS[A-Z0-9]*")
   }
   org_db <- RNAscripts::get_org_db(species)
-  eg <- get_entrezgenes_from_ensembl(DE_tb[, 1], input_type = input_type,
-                                     org_db = org_db)
+  eg <- get_entrezgenes_from_ensembl(DE_tb[, 1],
+    input_type = input_type,
+    org_db = org_db
+  )
   rownames(DE_tb) <- DE_tb[, 1]
   DE_tb <- DE_tb[eg[, 1], ]
   # DE_tb <- DE_tb %>% dplyr::filter(DE_tb[,1] %in% eg[,1])
 
   gene_ranks <- stats::setNames(DE_tb[, 2], nm = eg$ENTREZID) %>% sort(decreasing = T)
 
-  kegg_species <- get_kegg_name(species) 
+  kegg_species <- get_kegg_name(species)
   fgsea_results <- clusterProfiler::gseKEGG(gene_ranks, organism = kegg_species, pvalueCutoff = p_valcut, eps = 0)
 
   return(fgsea_results)
@@ -214,7 +216,7 @@ buildReactome <- function(output_type = "ENSEMBL", species) {
   reac <- as.list(reactome.db::reactomePATHID2EXTID)
   reac.names <- as.list(reactome.db::reactomePATHID2NAME)
   # FIlter for Human Pathways
-  index <- grep("R-MMU", names(reac.names), value = T)
+  index <- grep("R-MMU", names(reac.names), value = TRUE)
 
   mouse.reac <- reac[index]
 
@@ -239,7 +241,7 @@ buildReactome <- function(output_type = "ENSEMBL", species) {
       x)
 
     return(entrez.to.gene[index, 2])
-  }, USE.NAMES = T)
+  }, USE.NAMES = TRUE)
 
   return(reactomeDB)
 }
@@ -336,7 +338,7 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
   } else {
     dp_pos_NES <- NULL
   }
-  
+
   neg_gsea <- gset %>% dplyr::filter(NES < -0.5)
   if (nrow(neg_gsea) > 1) {
     dp_neg_NES <-
@@ -351,7 +353,7 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
   } else {
     dp_neg_NES <- NULL
   }
-  
+
   return(list(dp_pos_NES, dp_neg_NES))
 }
 #' Title

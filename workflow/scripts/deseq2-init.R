@@ -19,11 +19,11 @@ if (!exists("snakemake")) {
   coldata <- read.table("./data/Vasc_age2020/Vascage_samples.tsv",
     header = TRUE,
     row.names = "sample",
-    check.names = FALSE, 
+    check.names = FALSE,
     stringsAsFactors = TRUE
   )
-  #coldata %>% dplyr::filter(cell_type == "tumor") ->coldata
-  #cts <- cts[,rownames(small_coldata)]
+  # coldata %>% dplyr::filter(cell_type == "tumor") ->coldata
+  # cts <- cts[,rownames(small_coldata)]
   snakemake_conf <- yaml::read_yaml("./configs/VascAge_config.yaml")
   all_conditions <- names(snakemake_conf$diffexp$contrasts)
 }
@@ -50,19 +50,21 @@ if (!all(colnames(cts) == rownames(coldata))) {
 }
 # Remove NAs from Data (not supported)
 if (any(is.na(coldata[, c(all_conditions)]))) {
-  na_index <- apply(coldata, 1, function(x) {any(is.na(x))})
-  coldata <- coldata[!na_index,]
+  na_index <- apply(coldata, 1, function(x) {
+    any(is.na(x))
+  })
+  coldata <- coldata[!na_index, ]
   cts <- cts[, rownames(coldata)]
 }
 all_conditions <- names(snakemake@config$diffexp$contrasts)
 for (x in all_conditions) {
-  coldata[,x] <- as.factor(coldata[,x]) 
+  coldata[, x] <- as.factor(coldata[, x])
 }
 
 dds <- DESeqDataSetFromMatrix(
   countData = cts,
   colData = coldata,
-#  design = as.formula("~condition"))
+  #  design = as.formula("~condition"))
   design = as.formula(snakemake@params[["model"]]),
 )
 
@@ -82,7 +84,7 @@ if (length(excluded_genes) > 0) {
   }
 }
 # remove uninformative columns
-dds <- dds[rowSums(counts(dds)) > ncol(dds)/2, ]
+dds <- dds[rowSums(counts(dds)) > ncol(dds) / 2, ]
 
 # normalization and preprocessing
 dds <- DESeq(dds,

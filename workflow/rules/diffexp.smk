@@ -77,7 +77,7 @@ rule rlog_transform:
         "logs/deseq2/rlog_trans.report.log",
     resources:
         mem_mb=8192,
-        time_min=29
+        time_min=29,
     threads: 4
     script:
         "../scripts/rlog_transform.R"
@@ -211,7 +211,7 @@ rule run_mitch:
 rule export_diffexp_xlsx:
     input:
         table=get_diffexp_tables,
-        fpkm=get_fpkm     
+        fpkm=get_fpkm,
     output:
         outpath=join(
             BASE_ANALYSIS_DIR,
