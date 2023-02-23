@@ -75,4 +75,4 @@ fpkm_mat = fpkm_mat.groupby(fpkm_mat.columns, axis=1).sum()
 fpkm_mat["gname"] = gene_names["name"]
 
 matrix.to_csv(snakemake.output[0], sep="\t")
-#fpkm_mat.to_csv(snakemake.output[1], sep="\t")
+fpkm_mat.to_csv(snakemake.output[1], sep="\t")

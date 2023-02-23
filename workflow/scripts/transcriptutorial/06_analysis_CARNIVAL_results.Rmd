@@ -93,18 +93,21 @@ if (exists("snakemake")) {
   workflow_config <- snakemake@config
 
   sample_table <- readr::read_tsv(workflow_config$samples)
+  organism <- workflow_config$organism
 } else {
-  BASE_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/Vasc_age2020/results/carnival/sample_resolution"
-  workflow_config <- yaml::read_yaml("../../configs/VascAge_config.yaml")
-  sample_table <- readr::read_tsv("../../data/Vasc_age2020/Vascage_samples.tsv")
+  BASE_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/tec_aplnrKO/results/carnival/sample_resolution"
+  workflow_config <- yaml::read_yaml("../../../configs/tec_aplnrKO.yaml")
+  sample_table <- readr::read_tsv("../../../data/tumor_vs_ec/Aplnr_KO.tsv")
   sample_ids <- sample_table %>% pull(sample)
   carnival_sample_result <- file.path(BASE_DIR, paste0(sample_ids, "_carn_res.RDS.gz"))
   names(carnival_sample_result) <- sample_ids
   base_path <- "/desktop-home/heyer/projects/Vascular_Aging"
   tt_basepath <- file.path(base_path, "RNAseq/rna-seq-star-deseq2/workflow/scripts/transcriptutorial")
+  organism <- "Mus musculus"
 }
 source(file.path(tt_basepath, "support_enrichment.r"))
 source(file.path(tt_basepath, "support_networks.r"))
+
 carnival_sample_resolution <- purrr::map(carnival_sample_result, readRDS)
 
 # Check if any are 0
@@ -131,8 +134,8 @@ The following samples could not create a network.
 
 ```{r}
 # read CARNIVAL results
-
-omniR <- OmnipathR::import_omnipath_interactions(organism = 10090)
+omnipath_id <- RNAscripts::get_organism_omnipath_id(organism)
+omniR <- OmnipathR::import_omnipath_interactions(organism = omnipath_id)
 
 # signed and directed
 omnipath_sd <- omniR %>% dplyr::filter(consensus_direction == 1 &
@@ -287,21 +290,27 @@ get_common_interactions <- function(interaction_list, psmpl_per = 95,
     filter(condition %in% condition_sel) %>%
     pull(sample)
   interaction_list <- interaction_list[, sample_id_list]
-  shared_interactions_WT <- getCoreInteractions(topology = interaction_list, psmpl = psmpl_per)
-
-  # Visualise the interactions
-  colnames(shared_interactions_WT) <- c("from", "sign", "to")
-  labels_edge <- c("-1" = "inhibition", "1" = "activation")
-  nodes <- data.frame(union(shared_interactions_WT$from, shared_interactions_WT$to))
-  colnames(nodes) <- "nodes"
-  nodes$label <- nodes$nodes
-
-  tidygraph::tbl_graph(nodes = nodes, edges = shared_interactions_WT) %>%
-    ggraph::ggraph(layout = "auto") +
-    geom_node_point(color = "#C0C0C0", size = 8) +
-    geom_edge_link(arrow = arrow(), aes(edge_colour = as.factor(sign))) +
-    theme_graph() +
-    geom_node_text(aes(label = label), vjust = 0.4)
+  
+  if (!is.null(dim(interaction_list))) {
+    shared_interactions_WT <- getCoreInteractions(topology = interaction_list, psmpl = psmpl_per)
+    
+    # Visualise the interactions
+    colnames(shared_interactions_WT) <- c("from", "sign", "to")
+    labels_edge <- c("-1" = "inhibition", "1" = "activation")
+    nodes <- data.frame(union(shared_interactions_WT$from, shared_interactions_WT$to))
+    colnames(nodes) <- "nodes"
+    nodes$label <- nodes$nodes
+    
+    gg_graph <- tidygraph::tbl_graph(nodes = nodes, edges = shared_interactions_WT) %>%
+      ggraph::ggraph(layout = "auto") +
+      geom_node_point(color = "#C0C0C0", size = 8) +
+      geom_edge_link(arrow = arrow(), aes(edge_colour = as.factor(sign))) +
+      theme_graph() +
+      geom_node_text(aes(label = label), vjust = 0.4)
+  } else {
+    gg_graph <- NULL
+  }
+  gg_graph
 }
 ```
 
@@ -392,7 +401,11 @@ groups_to_check <- c(
 
 
 yoted <- purrr::map(groups_to_check, get_common_interactions, interaction_list = interactions, psmpl_per = 60, s_table = sample_table[!lgl_index, ])
-yoted <- purrr::map2(yoted, names(groups_to_check), function(x, y) x + ggtitle(y))
+if(any(purrr::map(yoted, is.null))) {
+  null_index <- purrr::map_lgl(yoted, is.null)
+  yoted <- yoted[!null_index]
+}
+yoted <- purrr::map2(yoted, names(yoted), function(x, y) x + ggtitle(y))
 
 yoted
 ```
@@ -412,7 +425,7 @@ build_matrix_from_nodes <- function(node_list, node_type = "AvgAct") {
 avg_mat <- build_matrix_from_nodes(nodos)
 rownames(avg_mat) <- avg_mat$Node
 avg_mat <- subset(avg_mat, select = -c(Node)) %>% as.matrix()
-non_zero_index <- apply(avg_mat, 1, function(x) length(which(x != 0)) > 2)
+non_zero_index <- apply(avg_mat, 1, function(x) length(which(x != 0)) >= 2)
 
 
 

@@ -66,3 +66,5 @@ run_carnival:
   joint_rep: False
 
 cplex_solver: ""
+
+DKFZ: False

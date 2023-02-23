@@ -5,7 +5,7 @@ channels:
 dependencies:
   - bioconductor-viper
   # - bioconductor-dorothea (NOTE: DOrothea is broken on bioconda)
-  - bioconductor-omnipathr
+  - bioconductor-decoupler
   - bioconductor-chipseeker
   - bioconductor-deseq2
   - bioconductor-reactomepa
@@ -28,8 +28,8 @@ dependencies:
   - r-dt
   - r-devtools
   - bioconductor-complexheatmap
-  - bioconductor-bsgenome.mmusculus.ucsc.mm10
-  - bioconductor-bsgenome.hsapiens.ucsc.hg38
+  #- bioconductor-bsgenome.mmusculus.ucsc.mm10
+  #- bioconductor-bsgenome.hsapiens.ucsc.hg38
   - bioconductor-clusterprofiler
   - r-rmarkdown
   - r-knitr
@@ -40,8 +40,10 @@ dependencies:
   - r-msigdbr
   - r-babelgene
   - r-ggsignif
-  - r-rvcheck<0.2.0
+  - r-rvcheck
   - bioconductor-enhancedvolcano
   - r-ggnewscale
   - r-svglite
   - bioconductor-do.db
+  - bioconductor-apeglm
+  - r-ggupset

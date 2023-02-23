@@ -4,12 +4,18 @@
 \alias{convertHumanGeneHomologs}
 \title{convert between human and mouse homologs using homolog table}
 \usage{
-convertHumanGeneHomologs(x, jax_database = NULL)
+convertHumanGeneHomologs(
+  x,
+  jax_database = NULL,
+  input_organism = "Homo sapiens"
+)
 }
 \arguments{
 \item{x}{List of genes}
 
-\item{jax_database}{Databse from outside to reduce http calls}
+\item{jax_database}{Database from outside to reduce http calls}
+
+\item{input_organism}{Organism being converted from (Homo sapiens or Mus musculus)}
 }
 \description{
 convert between human and mouse homologs using homolog table

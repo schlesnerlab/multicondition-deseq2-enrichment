@@ -137,10 +137,15 @@ my_color = colorRampPalette(c("Darkblue", "white","red"))(palette_length)
 
 my_breaks <- c(seq(-3, 0, length.out=ceiling(palette_length/2) + 1),
                seq(0.05, 3, length.out=floor(palette_length/2)))
-ha <- rowAnnotation(group = as.character(dds_obj@colData[, cond_var]),
+
+if (!is.null(color_scheme)) {
+  ha <- rowAnnotation(group = as.character(dds_obj@colData[, cond_var]),
                         col = list(group = 
                           as_vector(color_scheme))
-)
+  )
+} else {
+    ha <- rowAnnotation(group = as.character(dds_obj@colData[, cond_var]))
+}
 
 
 # Plot

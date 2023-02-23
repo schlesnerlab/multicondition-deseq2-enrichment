@@ -77,6 +77,7 @@ rule rlog_transform:
         "logs/deseq2/rlog_trans.report.log",
     resources:
         mem_mb=8192,
+        time_min=29,
     threads: 4
     script:
         "../scripts/rlog_transform.R"
@@ -88,7 +89,7 @@ rule deseq_report:
         table=join(
             BASE_ANALYSIS_DIR, "results/diffexp/{condition}/{contrast}.diffexp.tsv"
         ),
-        fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
+        fpkm=get_fpkm,
         featureCounts=get_count_matrix,
         rld=join(BASE_ANALYSIS_DIR, "deseq2/rlog_transform.RDS.gz"),
         gsea_result=join(
@@ -131,7 +132,7 @@ rule run_gsea:
     threads: 1
     resources:
         time_min=59 * 4,
-        mem_mb=8192 * 5,
+        mem_mb=8192 * 7,
     script:  #
         "../scripts/run_gsea.R"
 
@@ -210,7 +211,7 @@ rule run_mitch:
 rule export_diffexp_xlsx:
     input:
         table=get_diffexp_tables,
-        fpkm=join(BASE_ANALYSIS_DIR, "fpkm/all.tsv"),
+        fpkm=get_fpkm,
     output:
         outpath=join(
             BASE_ANALYSIS_DIR,

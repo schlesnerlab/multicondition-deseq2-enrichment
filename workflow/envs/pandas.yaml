@@ -1,4 +1,5 @@
 channels:
   - conda-forge
 dependencies:
-  - pandas =0.23
+  - pandas
+  - openpyxl
