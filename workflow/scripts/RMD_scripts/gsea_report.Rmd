@@ -24,18 +24,20 @@ if (exists("snakemake")) {
   names(gsea_list) <- names(x = c_groups)
   species_name <- snakemake@config[["organism"]]
   gene_name_type <- snakemake@config[["gene_name_type"]]
-} else {
+  save_plots <- TRUE
+ } else {
 
-  conf <- yaml::read_yaml("../../../configs/tec_aplnrKO.yaml")
+  conf <- yaml::read_yaml("../../../config/workflow_unit_test.yaml")
   BASE_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
   cond_id <- names(conf$diffexp$contrasts)[1]
   gsea_list <- as.list(file.path(BASE_DIR, glue::glue("results/diffexp/{cond_id}/{names(conf$diffexp$contrasts[[cond_id]])}.gseares.RDS")))
   c_groups <- names(conf$diffexp$contrasts[[cond_id]])
   names(gsea_list) <- c_groups
  #  gsea_list <- gsea_list[1:3]
-  plot_path <- "plots"
+  plot_path <- "/home/heyer/tmp/"
   species_name <- "Mus musculus"
   gene_name_type <- "ENSEMBL"
+  save_plots <- TRUE
 }
 ```
 
@@ -47,7 +49,7 @@ GSEA gene set tested.
 
 ```{r Parse data}
 
-create_all_gsea_plots <- function(msig_list, contrast_n, limit = 30, type, save_plots = F) {
+create_all_gsea_plots <- function(msig_list, contrast_n, limit = 30, plot_type, save_plots = F) {
   if (is.list(msig_list)) {
     msig_list <- msig_list[[1]]
   }
@@ -65,10 +67,10 @@ create_all_gsea_plots <- function(msig_list, contrast_n, limit = 30, type, save_
   })
   names(all_plots) <- sig_ids
   if (save_plots) {
-    gsea_plot_path <- glue::glue("{plot_path}/{contrast_n}_plots/{type}", recursive = T)
+    gsea_plot_path <- glue::glue("{plot_path}/{plot_type}", recursive = T)
     dir.create(gsea_plot_path, recursive = T)
     purrr::map2(all_plots, sig_ids, function(p, n) {
-      ggsave(plot = p, filename = file.path(gsea_plot_path,paste0( n, "_gseaplot.svgz")),device = svglite)
+      ggsave(plot = aplot::as.patchwork(p), filename = file.path(gsea_plot_path,paste0( n, "_gseaplot.svgz")),device = svglite)
     })
   }
   all_plots
@@ -120,27 +122,34 @@ create_msig_entries <- function(gsea_res, msig_type, ktype, limit = 30) {
   stopifnot(!is.null(names(gsea_res)))
   for (set_n in names(gsea_res)) {
     cat("#### ", set_n, " {.tabset} \n")
-
+    
+    
     yote <- gsea_res[[set_n]][[msig_type]]
+    if (is.null(yote)) {next}
     if (is.list(yote)) {
       yote <- yote[[1]]
     }
     org_db <- RNAscripts::get_org_db(species_name)
-    yote <- setReadable(yote, org_db, keyType = ktype)
+    if (is(gsea_result$basal_pos_vs_bas_neg$msig_gsea, "gseaResult")) {
+      yote <- setReadable(yote, org_db, keyType = ktype)
+    }
 
     msig_res <- gsea_res[[set_n]][[msig_type]]
     if (is.list(msig_res)) {
       msig_res <- msig_res[[1]]
     }
     all_plots <- create_all_gsea_plots(msig_res,
-      type = msig_type,
+      plot_type = msig_type,
       contrast_n = set_n,
-      limit = limit, save_plots = F
+      limit = limit, save_plots = save_plots
     )
-    if (nrow(msig_res@result) < limit) {
-      names(all_plots) <- msig_res@result$ID
-    } else {
-      names(all_plots) <- msig_res@result$ID[1:limit]
+    
+    if (!is.null(msig_res)) {
+      if (nrow(msig_res@result) < limit) {
+        names(all_plots) <- msig_res@result$ID
+      } else {
+        names(all_plots) <- msig_res@result$ID[1:limit]
+      }
     }
     print(knitr::kable(yote@result[, -c(1, length(yote@result))] %>% arrange(desc(NES))))
 
@@ -164,7 +173,7 @@ create_msig_entries <- function(gsea_res, msig_type, ktype, limit = 30) {
   cat("\n")
 }
 
-create_msig_entries(gsea_result, msig_type = "msig_gsea", ktype = gene_name_type, limit = 30)
+create_msig_entries(gsea_result, msig_type = "msig_gsea", ktype = gene_name_type, limit = 2)
 ```
 
 

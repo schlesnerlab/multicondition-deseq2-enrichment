@@ -8,6 +8,7 @@ if (exists("snakemake")) {
   diffexp_tb_path <- snakemake@input[["table"]]
   fpkm_path <- snakemake@input[["fpkm_path"]]
   contrast_groups <- snakemake@params[["contrast"]]
+  gsea_use_stat <- snakemake@params[["gsea_use_stat"]]
   pvalue_threshold <- snakemake@config[["diffexp"]][["pval_threshold"]]
   LFC_threshold <- snakemake@config[["diffexp"]][["LFC_threshold"]]
   out_file <- snakemake@output[["gsea_result"]]
@@ -25,6 +26,7 @@ if (exists("snakemake")) {
   pvalue_threshold <- 0.05
   LFC_threshold <- 0.5
   organism <- "Mus musculus"
+  gsea_use_stat <- TRUE
 }
 org_db <- RNAscripts::get_org_db(organism)
 
@@ -43,11 +45,15 @@ joined_df <- RNAscripts::join_tables(diffxp_tb, filer)
 joined_df <- joined_df %>%
   dplyr::mutate(overexpressed_in = ifelse(logFoldChange > 0, contrast_groups[1], contrast_groups[2]))
 
-# joined_df$gsea_stat <- joined_df$stat
+if (gsea_use_stat) {
+  joined_df <- joined_df %>% dplyr::mutate(gsea_stat = joined_df$stat)
 
+} else {
 joined_df <- joined_df %>%
   dplyr::mutate(gsea_stat = -log10(pvalue) * logFoldChange)
+}
 
+joined_df <- joined_df %>% dplyr::arrange(desc(gsea_stat))
 gene_list <- joined_df %>%
   dplyr::select(c(gname, gsea_stat))
 ensemblgene_list <- joined_df %>%
@@ -82,8 +88,9 @@ msig_c6 <- RNAscripts::run_msig_enricher(list(ensemblgene_list),
   category = "C6", eps = 0, species = organism
 )[[1]]
 gc()
-kegg <- RNAscripts::run_gsea(ensemblgene_list, input_type = "ENSEMBL", p_valcut = 0.1, species = organism)
-
+### BUGGED
+#kegg <- RNAscripts::run_gsea(ensemblgene_list, input_type = "ENSEMBL", p_valcut = 0.05, species = organism)
+kegg <- NULL
 g_vec <- RNAscripts::get_entrezgene_vector(ensemblgene_list, "ENSEMBL", org_db = org_db)
 
 reactome_stuff <- ReactomePA::gsePathway(g_vec, organism = tolower(RNAscripts::get_organism_omnipath_name(organism)), verbose = TRUE)

@@ -75,7 +75,7 @@ if (exists("snakemake")) {
   organism <- snakemake@config[["organism"]]
   conf <- snakemake@config
 } else {
-  conf <- yaml::read_yaml("./../../config/STAD.yaml")
+  conf <- yaml::read_yaml("./configs/tec_aplnrKO.yaml")
   base_analysis_dir <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
 
   cond_id <- names(conf$diffexp$contrasts)[1]
@@ -530,7 +530,7 @@ x <- do_gseaplots(msig_gsea, setNames(
 
 x
 msig_set <- clusterProfiler::setReadable(msig_gsea, org_db, "ENSEMBL")
-if (nrow(msig_gsea) > 1) {
+if (!is.null(msig_gsea) & nrow(msig_gsea) > 1) {
   enriched_plot <- plot_enrichment(msig_gsea@result,
     X = "ID", Y = "NES",
     pval = "p.adjust"
@@ -539,7 +539,7 @@ if (nrow(msig_gsea) > 1) {
     contrast_groups[1], "_vs_",
     contrast_groups[2],
     "_msig_gsea_enrichplot.svg"
-  )))
+  )),  plot = enriched_plot)
   plot(enriched_plot)
   f_changes <- ensembl_gene_list
   f_changes$gene <- f_changes$gene %>% stringr::str_extract(., "^ENS[A-Z0-9]*")
@@ -625,7 +625,7 @@ if (!is.null(msig_enrichment)) {
 
 The following plots were generated against the KEGG pathway database in mice. 
 
-```{r KEGG plots, fig.width = 10,fig.height =10}
+```{r KEGG plots, fig.width = 10,fig.height =10, eval = !is.null(kegg)}
 library(dplyr)
 dupfree_gene_list <- gene_list[!duplicated(gene_list$gname), ]
 
@@ -654,7 +654,7 @@ if (nrow(kegg@result) > 1) {
 }
 ```
 
-```{r fig.height=16, fig.width=16}
+```{r fig.height=16, fig.width=16, eval = !is.null(kegg)}
 if (nrow(kegg) > 1) {
   cnet_kegg <- cnetplot(
     kegg,

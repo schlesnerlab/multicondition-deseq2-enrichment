@@ -125,6 +125,7 @@ rule run_gsea:
         ),
     params:
         contrast=get_contrast,
+        gsea_use_stat=config["diffexp"]["gsea_use_stat"]
     conda:
         "../envs/R_4.yaml"
     log:

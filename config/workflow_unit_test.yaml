@@ -40,6 +40,7 @@ pca:
     - cond
 
 diffexp:
+  gsea_use_stat: False
   pval_threshold: 0.05 
   LFC_threshold: 0.5
   shrink_lfc: True
