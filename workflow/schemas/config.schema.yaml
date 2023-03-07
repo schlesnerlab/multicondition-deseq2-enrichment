@@ -23,8 +23,6 @@ properties:
   diffexp:
     type: object
     properties:
-      gsea_use_stat:
-        type: boolean
       contrasts:
         type: object
       shrink_lfc:
