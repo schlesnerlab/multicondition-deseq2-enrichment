@@ -32,7 +32,7 @@ properties:
       pval_threshold:
         type: number
     required:
-      - contrast
+      - contrasts
       - shrink_lfc
       - LFC_threshold
       - pval_threshold
