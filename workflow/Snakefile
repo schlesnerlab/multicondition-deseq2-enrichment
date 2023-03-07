@@ -119,7 +119,10 @@ rule all:
 # with --use-conda --use-singularity
 container: "docker://continuumio/miniconda3"
 
+
 containerized: "docker://chheyer/multiconditiondeseq2enrichment:1.1.0"
+
+
 ##### setup report #####
 
 

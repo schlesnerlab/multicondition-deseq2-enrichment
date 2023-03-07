@@ -16,13 +16,13 @@ split_contrast_groups <- function(cont) {
 #' @export
 join_tables <- function(DEseq_tb, fpkm) {
   diff_exp <- DEseq_tb
-  
+
   filer <- fpkm %>%
     dplyr::filter(gene %in% diff_exp$gene_id) %>%
     dplyr::filter(!duplicated(gene))
   joined_df <-
     dplyr::inner_join(filer, DEseq_tb, by = c("gene" = "gene_id")) %>% dplyr::arrange(padj)
-  
+
   return(joined_df)
 }
 #' Calculates mean values from the Four groups, which are still hardcoded. and returns
@@ -43,7 +43,7 @@ mean_tibble_from_mat <-
            s_map,
            cond_id) {
     mat_tb <- tibble::as_tibble(mat)
-    
+
     mean_tb <- tibble::tibble(.rows = nrow(mat_tb))
     for (gr in contrast_groups) {
       col_n <- s_map %>%
@@ -60,7 +60,7 @@ mean_tibble_from_mat <-
     if (!is.null(extra_col)) {
       mean_tb[extra_col] <- mat_tb %>% dplyr::select(extra_col)
     }
-    
+
     mean_tb
   }
 
@@ -94,18 +94,18 @@ create_overlap_matrix <- function(sig_gene_names) {
   gene_name_index <- unlist(sig_gene_names) %>%
     unique() %>%
     sort()
-  
-  
-  
+
+
+
   gene_matrix <-
     sapply(sig_gene_names, check_against_index, index = gene_name_index)
   rownames(gene_matrix) <- gene_name_index
-  
+
   gene_matrix <- cbind(gene_matrix, total = rowSums(gene_matrix))
-  
+
   ordered_matrix <-
     gene_matrix[order(gene_matrix[, "total"], decreasing = TRUE), ]
-  
+
   DT::datatable(ordered_matrix)
 }
 #' filters table so only contrasted samples remain
@@ -125,9 +125,10 @@ filter_split_table <-
            cond_id) {
     expression_values <-
       as.data.frame(SummarizedExperiment::assay(rld)[j_df$gene,
-                                                     rld@colData[, cond_id] %in%
-                                                       contrast_groups,
-                                                     drop = FALSE])
+        rld@colData[, cond_id] %in%
+          contrast_groups,
+        drop = FALSE
+      ])
     rownames(expression_values) <- j_df$gname
     if (reorder_genes) {
       expression_values <-

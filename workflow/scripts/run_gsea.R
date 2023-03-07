@@ -47,10 +47,9 @@ joined_df <- joined_df %>%
 
 if (gsea_use_stat) {
   joined_df <- joined_df %>% dplyr::mutate(gsea_stat = joined_df$stat)
-
 } else {
-joined_df <- joined_df %>%
-  dplyr::mutate(gsea_stat = -log10(pvalue) * logFoldChange)
+  joined_df <- joined_df %>%
+    dplyr::mutate(gsea_stat = -log10(pvalue) * logFoldChange)
 }
 
 joined_df <- joined_df %>% dplyr::arrange(desc(gsea_stat))
@@ -89,7 +88,7 @@ msig_c6 <- RNAscripts::run_msig_enricher(list(ensemblgene_list),
 )[[1]]
 gc()
 ### BUGGED
-#kegg <- RNAscripts::run_gsea(ensemblgene_list, input_type = "ENSEMBL", p_valcut = 0.05, species = organism)
+# kegg <- RNAscripts::run_gsea(ensemblgene_list, input_type = "ENSEMBL", p_valcut = 0.05, species = organism)
 kegg <- NULL
 g_vec <- RNAscripts::get_entrezgene_vector(ensemblgene_list, "ENSEMBL", org_db = org_db)
 

@@ -1,4 +1,3 @@
-
 #' Get entrezgenenames from ensembl
 #'
 #' @param gene_names vecotr of gene symbols to be converted
@@ -38,7 +37,7 @@ get_entrezgene_vector <- function(gene_tb, input_type = "SYMBOL", org_db) {
   eg <- get_entrezgenes_from_ensembl(gene_tb[, 1], input_type, org_db = org_db)
   rownames(gene_tb) <- gene_tb[, 1]
   gene_tb <- gene_tb[eg[, 1], ]
-  gene_ranks <- stats::setNames(gene_tb[, 2], nm = eg$ENTREZID) %>% 
+  gene_ranks <- stats::setNames(gene_tb[, 2], nm = eg$ENTREZID) %>%
     sort(decreasing = TRUE)
   gene_ranks
 }
@@ -64,7 +63,6 @@ table_to_list <- function(tb, ref_col, val_col) {
 #' @param gene2id Translation table from \link{table_to_list}
 #' @export
 transform_glist <- function(gene_set, gene2id) {
-
   index <- gene_set %>% dplyr::pull(2)
   self_hatred <- gene2id[as.character(index)]
   length_info <- sapply(self_hatred, length)
@@ -109,10 +107,10 @@ over_rep_test <- function(DE_genes, T2G, universe, input_type = "ENSEMBL", ...) 
 gsea_test <- function(DE_genes, T2G, input_type = "gene_symbol", ...) {
   DE_genes <- as.data.frame(DE_genes)
   if (input_type == "ENSEMBL") {
-    DE_genes[, 1] <- stringr::str_extract(string = DE_genes %>% 
-                                            dplyr::pull(1), "^ENS[A-Z0-9]*")
+    DE_genes[, 1] <- stringr::str_extract(string = DE_genes %>%
+      dplyr::pull(1), "^ENS[A-Z0-9]*")
   }
-  glist <- stats::setNames(DE_genes[, 2], nm = DE_genes[, 1]) %>% 
+  glist <- stats::setNames(DE_genes[, 2], nm = DE_genes[, 1]) %>%
     sort(decreasing = TRUE)
   enrichment_result <- clusterProfiler::GSEA(
     geneList = glist,

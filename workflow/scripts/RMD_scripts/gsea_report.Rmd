@@ -8,8 +8,10 @@ fig_height: 9
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, dev = "png", 
-                      fig.width = 12, fig.height = 12)
+knitr::opts_chunk$set(
+  echo = FALSE, warning = FALSE, message = FALSE, dev = "png",
+  fig.width = 12, fig.height = 12
+)
 library(purrr)
 library(clusterProfiler)
 library(magrittr)
@@ -20,20 +22,19 @@ if (exists("snakemake")) {
   gsea_list <- snakemake@input[["gsea_result"]]
   plot_path <- snakemake@params[["plot_path"]]
   c_groups <- snakemake@params[["contrast_groups"]]
-  write(unlist(c_groups), file=stderr())
+  write(unlist(c_groups), file = stderr())
   names(gsea_list) <- names(x = c_groups)
   species_name <- snakemake@config[["organism"]]
   gene_name_type <- snakemake@config[["gene_name_type"]]
   save_plots <- TRUE
- } else {
-
+} else {
   conf <- yaml::read_yaml("../../../config/workflow_unit_test.yaml")
   BASE_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
   cond_id <- names(conf$diffexp$contrasts)[1]
   gsea_list <- as.list(file.path(BASE_DIR, glue::glue("results/diffexp/{cond_id}/{names(conf$diffexp$contrasts[[cond_id]])}.gseares.RDS")))
   c_groups <- names(conf$diffexp$contrasts[[cond_id]])
   names(gsea_list) <- c_groups
- #  gsea_list <- gsea_list[1:3]
+  #  gsea_list <- gsea_list[1:3]
   plot_path <- "/home/heyer/tmp/"
   species_name <- "Mus musculus"
   gene_name_type <- "ENSEMBL"
@@ -48,7 +49,6 @@ for the Vascular Aging Project. Results are shown for each sample group and for 
 GSEA gene set tested. 
 
 ```{r Parse data}
-
 create_all_gsea_plots <- function(msig_list, contrast_n, limit = 30, plot_type, save_plots = F) {
   if (is.list(msig_list)) {
     msig_list <- msig_list[[1]]
@@ -70,7 +70,7 @@ create_all_gsea_plots <- function(msig_list, contrast_n, limit = 30, plot_type, 
     gsea_plot_path <- glue::glue("{plot_path}/{plot_type}", recursive = T)
     dir.create(gsea_plot_path, recursive = T)
     purrr::map2(all_plots, sig_ids, function(p, n) {
-      ggsave(plot = aplot::as.patchwork(p), filename = file.path(gsea_plot_path,paste0( n, "_gseaplot.svgz")),device = svglite)
+      ggsave(plot = aplot::as.patchwork(p), filename = file.path(gsea_plot_path, paste0(n, "_gseaplot.svgz")), device = svglite)
     })
   }
   all_plots
@@ -109,7 +109,7 @@ build_gene_set_detail <- function(gset_res, gset_name, inkey) {
     dplyr::filter(!!rlang::sym(inkey) %in% gset_res@geneSets[[gset_name]]) %>%
     mutate(core_enrichment = ifelse(!!rlang::sym(inkey) %in% ensembl_names, "YES", "NO"))
   org_db <- RNAscripts::get_org_db(species_name)
-  t_table <- clusterProfiler::bitr(all_geneList %>% dplyr::pull(inkey), inkey, "SYMBOL", OrgDb = org_db )
+  t_table <- clusterProfiler::bitr(all_geneList %>% dplyr::pull(inkey), inkey, "SYMBOL", OrgDb = org_db)
 
   yarp <- dplyr::inner_join(all_geneList, t_table) %>%
     dplyr::relocate(SYMBOL) %>%
@@ -122,10 +122,12 @@ create_msig_entries <- function(gsea_res, msig_type, ktype, limit = 30) {
   stopifnot(!is.null(names(gsea_res)))
   for (set_n in names(gsea_res)) {
     cat("#### ", set_n, " {.tabset} \n")
-    
-    
+
+
     yote <- gsea_res[[set_n]][[msig_type]]
-    if (is.null(yote)) {next}
+    if (is.null(yote)) {
+      next
+    }
     if (is.list(yote)) {
       yote <- yote[[1]]
     }
@@ -143,7 +145,7 @@ create_msig_entries <- function(gsea_res, msig_type, ktype, limit = 30) {
       contrast_n = set_n,
       limit = limit, save_plots = save_plots
     )
-    
+
     if (!is.null(msig_res)) {
       if (nrow(msig_res@result) < limit) {
         names(all_plots) <- msig_res@result$ID

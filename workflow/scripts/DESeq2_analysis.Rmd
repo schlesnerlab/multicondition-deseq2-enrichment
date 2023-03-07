@@ -174,7 +174,6 @@ DESeq2::plotMA(res)
 
 
 ```{r load DEseq data, echo=FALSE}
-
 sample_overview <- readr::read_tsv(samp_map)
 
 deseq_tb <- readr::read_tsv(diffexp_tb_path,
@@ -244,11 +243,12 @@ small_joined_df <- na.omit(small_joined_df)
 
 if (nrow(small_joined_df) > 1) {
   scaled_diffexp <- diff_exp_genes
-  diffexp_heatmap <- Heatmap(head(scaled_diffexp[order(
-    abs(small_joined_df$logFoldChange * -log10(small_joined_df$padj)),
-    decreasing = TRUE
-  ), ], 50),
-  top_annotation = col_annotation
+  diffexp_heatmap <- Heatmap(
+    head(scaled_diffexp[order(
+      abs(small_joined_df$logFoldChange * -log10(small_joined_df$padj)),
+      decreasing = TRUE
+    ), ], 50),
+    top_annotation = col_annotation
   )
   save_cheatmap_svg(
     x = diffexp_heatmap,
@@ -295,7 +295,6 @@ The Red and blue heatmaps show the gene expression normalized by the mean expres
 
 
 ```{r centered heatmap, fig.width = 14,fig.height =12}
-
 #' Uniquify a vector
 #'
 #' @param x Input factor to check
@@ -409,7 +408,6 @@ We also use an over representation test on the MsigDB pathway database as a comp
 
 
 ```{r go enrichment}
-
 msig_enrichment <- enrich_list$msig_enrichment
 
 msig_gsea <- enrich_list$msig_gsea
@@ -515,9 +513,13 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
 #'
 #' @examples
 save_dotplots <- function(d_plot, p_group, p_path = plot_path, gsea_type) {
-  ggplot2::ggsave(filename = file.path(p_path,
-                              glue::glue("{p_group}_{gsea_type}_dplot.svg")),
-         d_plot, width = 10, height = 10)
+  ggplot2::ggsave(
+    filename = file.path(
+      p_path,
+      glue::glue("{p_group}_{gsea_type}_dplot.svg")
+    ),
+    d_plot, width = 10, height = 10
+  )
 }
 cat("### ", "msigdb gsea", " \n")
 
@@ -539,7 +541,7 @@ if (!is.null(msig_gsea) & nrow(msig_gsea) > 1) {
     contrast_groups[1], "_vs_",
     contrast_groups[2],
     "_msig_gsea_enrichplot.svg"
-  )),  plot = enriched_plot)
+  )), plot = enriched_plot)
   plot(enriched_plot)
   f_changes <- ensembl_gene_list
   f_changes$gene <- f_changes$gene %>% stringr::str_extract(., "^ENS[A-Z0-9]*")
@@ -603,13 +605,14 @@ if (!is.null(msig_enrichment)) {
 ```
 
 ```{r fig.width = 16, fig.height = 16}
-
 if (!is.null(msig_enrichment)) {
   if (nrow(msig_enrichment) > 1) {
     cnetplot(
       msig_enrichment,
-      foldChange = setNames(object = joined_df$logFoldChange,
-                            nm = as.data.frame(gene_list)[, 1]),
+      foldChange = setNames(
+        object = joined_df$logFoldChange,
+        nm = as.data.frame(gene_list)[, 1]
+      ),
       node_label = "all",
       layout = "nicely",
       cex_label_category = 0.8,
@@ -663,7 +666,6 @@ if (nrow(kegg) > 1) {
       nm = as.data.frame(gene_list)[, 1]
     ),
     node_label = "all",
-
     cex_label_category = 0.8,
     cex_label_gene = 0.6
   )

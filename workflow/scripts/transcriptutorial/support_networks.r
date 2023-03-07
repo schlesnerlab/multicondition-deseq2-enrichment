@@ -90,7 +90,6 @@ degree_count <- function(sif) {
 #' Rosa Hernansaiz Ballesteros, 2020
 
 getTopology <- function(networks = NULL, scafoldNET = NULL, inversCARNIVAL = F) {
-
   # set names in scafoldNET and change - for _
   colnames(scafoldNET) <- c("source", "interaction", "target")
   scafoldNET$source <- gsub("-", "_", scafoldNET$source,
@@ -115,13 +114,14 @@ getTopology <- function(networks = NULL, scafoldNET = NULL, inversCARNIVAL = F) 
   }
 
   # create matrix
-  topologies <- data.frame(matrix(
-    data = NA,
-    nrow = length(edges),
-    ncol = length(networks),
-    dimnames = list(edges, names(networks))
-  ),
-  stringsAsFactors = F
+  topologies <- data.frame(
+    matrix(
+      data = NA,
+      nrow = length(edges),
+      ncol = length(networks),
+      dimnames = list(edges, names(networks))
+    ),
+    stringsAsFactors = F
   )
 
   # set progress bar
@@ -187,7 +187,6 @@ getTopology <- function(networks = NULL, scafoldNET = NULL, inversCARNIVAL = F) 
 #' Rosa Hernansaiz Ballesteros, 2020
 #'
 getCoreInteractions <- function(topology = NULL, psmpl = 95) {
-
   # create SIF of shared interactions
   topology[!is.na(topology)] <- 1
 

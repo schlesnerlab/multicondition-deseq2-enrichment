@@ -57,7 +57,6 @@ samples_tsv <- "../../data/Vasc_age2020/Vascage_samples.tsv"
 
 
 ```{r read and format}
-
 units_info <- readr::read_tsv(units_tsv)
 samples_info <- readr::read_tsv(samples_tsv)
 
@@ -66,15 +65,15 @@ meta_data <- inner_join(units_info, samples_info) %>% mutate(col_name = str_remo
 files <- file.path(base_path, "all_samples", meta_data$col_name, "quant.sf")
 names(files) <- glue::glue("{meta_data$sample}_{meta_data$unit}")
 
-count_m <- tximport(files,type = "salmon", txOut = TRUE)
+count_m <- tximport(files, type = "salmon", txOut = TRUE)
 
 col_data <- DataFrame(meta_data)
 rownames(col_data) <- col_data$col_name
 
-ddsTxi <- DESeqDataSetFromTximport(count_m, 
-                                   colData = col_data,
-                                   design = ~ condition,
-                                  )
+ddsTxi <- DESeqDataSetFromTximport(count_m,
+  colData = col_data,
+  design = ~condition,
+)
 
 clades <- readr::read_csv(clades_csv)
 ```
@@ -83,29 +82,29 @@ clades <- readr::read_csv(clades_csv)
 You can also embed plots, for example:
 
 ```{r rundeseq, echo=FALSE}
-
-contrast_groups <- list("18m_vs_d0" = c("18m-lung", "d0-lung"),
-                        "d15_vs_d0" = c("d15-lung", "d0-lung"),
-                        "d22_vs_d0" = c("d22-lung", "d0-lung"),
-                        "d36_vs_d0" = c("d36-lung", "d0-lung"),
-                        "d36_vs_d15" = c("d36-lung", "d15-lung"))
+contrast_groups <- list(
+  "18m_vs_d0" = c("18m-lung", "d0-lung"),
+  "d15_vs_d0" = c("d15-lung", "d0-lung"),
+  "d22_vs_d0" = c("d22-lung", "d0-lung"),
+  "d36_vs_d0" = c("d36-lung", "d0-lung"),
+  "d36_vs_d15" = c("d36-lung", "d15-lung")
+)
 
 dds <- DESeq(ddsTxi)
 
 shrink_and_res <- function(dds, c_group) {
-  results(dds, contrast = c("condition", c_group)) 
+  results(dds, contrast = c("condition", c_group))
 }
-#resLFC <- lfcShrink(dds, coef="condition_d0.lung_vs_18m.lung")
-#res <- results(dds, contrast = c("condition", "18m-lung", "d0-lung"))
+# resLFC <- lfcShrink(dds, coef="condition_d0.lung_vs_18m.lung")
+# res <- results(dds, contrast = c("condition", "18m-lung", "d0-lung"))
 
 all_res <- purrr::map(contrast_groups, shrink_and_res, dds = dds)
 
 filter_sig <- function(res_table) {
-   as_tibble(res_table,rownames = "gene_names")  %>% filter(pvalue < 0.05 & abs(log2FoldChange) > 0.3)
+  as_tibble(res_table, rownames = "gene_names") %>% filter(pvalue < 0.05 & abs(log2FoldChange) > 0.3)
 }
 
 sig_res <- purrr::map(all_res, filter_sig)
-
 ```
 
 
@@ -119,36 +118,41 @@ openxlsx::write.xlsx(sig_res, file.path(base_path, "sig_TE_transkripts.xlsx"))
 library(ComplexHeatmap)
 rlog_dds <- rlog(dds)
 
-expr_values <- assay(rlog_dds) 
+expr_values <- assay(rlog_dds)
 row_clustering <- fastcluster::hclust(dist(expr_values))
-clade_index <- !is.nan(rowSums(expr_values)) 
-expr_values <- expr_values[clade_index,]
-norm_expr_values <- expr_values %>% t() %>% scale(center = T, scale = T) %>% t()
+clade_index <- !is.nan(rowSums(expr_values))
+expr_values <- expr_values[clade_index, ]
+norm_expr_values <- expr_values %>%
+  t() %>%
+  scale(center = T, scale = T) %>%
+  t()
 
-c_ha <- HeatmapAnnotation(group = col_data$condition,
-                          rep = col_data$unit, col = list(group = setNames(RColorBrewer::brewer.pal(length(unique(col_data$condition)),"Accent"),
-                                                                            nm = unique(col_data$condition))))
-r_ha <- rowAnnotation(clade_class = clades[clade_index,]$clade)
-ComplexHeatmap::Heatmap(norm_expr_values, top_annotation = c_ha, 
-                        right_annotation = r_ha, 
-                        show_row_names = F, col = viridis::viridis(100),
-                        clustering_method_columns = "ward.D", show_column_names = F, 
-                        cluster_rows = row_clustering
-                        )
-                        
-
+c_ha <- HeatmapAnnotation(
+  group = col_data$condition,
+  rep = col_data$unit, col = list(group = setNames(RColorBrewer::brewer.pal(length(unique(col_data$condition)), "Accent"),
+    nm = unique(col_data$condition)
+  ))
+)
+r_ha <- rowAnnotation(clade_class = clades[clade_index, ]$clade)
+ComplexHeatmap::Heatmap(norm_expr_values,
+  top_annotation = c_ha,
+  right_annotation = r_ha,
+  show_row_names = F, col = viridis::viridis(100),
+  clustering_method_columns = "ward.D", show_column_names = F,
+  cluster_rows = row_clustering
+)
 ```
 
 ````{r, fig.height = 8, fig.width = 10, fig.caption = "Volcano plot of differentially expressed genes"}
 library(EnhancedVolcano)
 
 do_enhanced_vol <- function(res, title) {
-    EnhancedVolcano(res,
+  EnhancedVolcano(res,
     lab = rownames(res),
-    x = 'log2FoldChange',
-    y = 'pvalue', title = title,
+    x = "log2FoldChange",
+    y = "pvalue", title = title,
     pCutoff = 0.05
-    )
+  )
 }
 
 plots <- purrr::map2(all_res, names(all_res), do_enhanced_vol)
