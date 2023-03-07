@@ -26,7 +26,7 @@ library(tidygraph)
 library(ComplexHeatmap)
 library(RNAscripts)
 library(UpSetR)
-
+library(knitr)
 ```
 
 # Join CARNIVAL nework comparison
@@ -48,11 +48,13 @@ if (exists("snakemake")) {
   outpath <- snakemake@output[[1]]
   organism <- snakemake@config[["organism"]]
 } else {
-  BASE_ANALYSIS_DIR = '/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/Vasc_age2020/'
+  #BASE_ANALYSIS_DIR = '/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/Vasc_age2020/'
   cond_id <- "condition"
-  the_yaml <- file.path("../../../configs/VascAge_config.yaml")
+  the_yaml <- file.path("../../../configs/VascAge_Apelin_config.yaml")
+
   yaml_me <- yaml::read_yaml(the_yaml)
-  carnival_paths <- file.path(BASE_ANALYSIS_DIR, "results/inversecarnival/condition",  
+  BASE_ANALYSIS_DIR <- yaml_me$dirs$BASE_ANALYSIS_DIR
+  carnival_paths <- file.path(BASE_ANALYSIS_DIR, "results/carnival/condition",  
                               paste0(names(yaml_me$diffexp$contrasts$condition), "_carnival_res.RDS.gz"))
   names(carnival_paths) <- names(yaml_me$diffexp$contrasts$condition)
   contrast_names <-  names(yaml_me$diffexp$contrasts$condition)
@@ -130,6 +132,12 @@ carnival_sample_resolution <- purrr::map(carnival_sample_resolution,
     process_carnival)
 carnival_sample_resolution <- carnival_sample_resolution[purrr::map(carnival_sample_resolution, length) > 0]
 
+if(length(carnival_sample_resolution) == 0) {
+  knitr::knit_exit(append = "All sample carnival runs failed. Aborting...")
+}
+```
+
+```{r}
 # get only summary files from CARNIVAL results
 sifts <- lapply(carnival_sample_resolution, function(x){x$weightedSIF})
 nodos <- lapply(carnival_sample_resolution, function(x){x$nodesAttributes})
@@ -315,7 +323,7 @@ get_common_interactions(interactions[],names(interactions), 100, carnival_list =
 
 ## Comparing both Treatment groups
 TODO requires work to get running for any group
-```{r, eval = T, fig.width=12, fig.height=12, eval = ifelse(length(sifts) >1, TRUE, FALSE)}
+```{r, fig.width=12, fig.height=12, eval = ifelse(length(sifts) >1, TRUE, FALSE)}
 # Get common interactions in a group
 create_overlap_matrix <- function(sig_gene_names) {
   

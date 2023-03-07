@@ -58,6 +58,7 @@ rule deseq2:
         "../envs/deseq2.yaml"
     resources:
         mem_mb=8192,
+        time_min=29
     log:
         "logs/deseq2/{condition}/{contrast}.diffexp.log",
     threads: get_deseq2_threads()
