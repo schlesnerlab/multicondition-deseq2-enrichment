@@ -15,7 +15,6 @@ def get_diffxp_files():
         ]
     )
     for cond in CONTRASTS:
-
         output_files.extend(
             expand(
                 [
