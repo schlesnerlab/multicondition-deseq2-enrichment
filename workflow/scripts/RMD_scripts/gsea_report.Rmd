@@ -175,7 +175,7 @@ create_msig_entries <- function(gsea_res, msig_type, ktype, limit = 30) {
   cat("\n")
 }
 
-create_msig_entries(gsea_result, msig_type = "msig_gsea", ktype = gene_name_type, limit = 2)
+create_msig_entries(gsea_result, msig_type = "msig_gsea", ktype = gene_name_type, limit = 20)
 ```
 
 

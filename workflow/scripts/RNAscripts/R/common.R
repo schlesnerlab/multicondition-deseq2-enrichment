@@ -216,3 +216,17 @@ read_deseq_tibble <- function(filepath) {
     skip = 1
   )
 }
+
+#' Convert fpkm values to tpm
+#'
+#' @param fpkm_mat matrix of fpkm values (rows = genes, columns = samples)
+#'
+#' @return a matrix of tpm values
+#' @export
+#'
+#' @examples
+fpkm_to_tpm <- function(fpkm_mat) {
+  fpkm_colsum <- colSums(fpkm_mat)
+  tpm_mat <- (fpkm_mat/fpkm_colsum) * 10^6 
+  tpm_mat
+}
