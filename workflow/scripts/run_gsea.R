@@ -13,7 +13,7 @@ if (exists("snakemake")) {
   LFC_threshold <- snakemake@config[["diffexp"]][["LFC_threshold"]]
   out_file <- snakemake@output[["gsea_result"]]
   organism <- snakemake@config[["organism"]]
-  gsea_config <- snakemake@config[["gsea"]][["gene_sets"]]
+  gsea_config <- snakemake@config[["gsea"]]
 } else {
   conf <- yaml::read_yaml("./configs/VascAge_config.yaml")
   BASE_ANALYSIS_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)

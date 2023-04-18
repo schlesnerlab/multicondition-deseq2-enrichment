@@ -53,27 +53,30 @@ diffexp:
   model: "~cond"
       
 gsea:
-  gene_sets:
-    Hallmark_gsea: 
-      category: H
-      subcategory: NULL
-      use_gsea: True
-      database: MSigDB
-    Hallmark_fisher:
-      category: H
-      subcategory: NULL
-      use_gsea: False 
-      database: MSigDB
-    MsigDB_C3:
-      catecory: C3
-      subcategory: "TFT:GTRD"
-      use_gsea: True
-      database: MSigDB
-    Reactome_GSEA:
-      category: NULL
-      subcategory: NULL
-      use_gsea: True
-      database: Reactome
+  Hallmark_gsea: 
+    category: H
+    subcategory: NULL
+    use_gsea: True
+    database: MSigDB
+    id_class: ENSEMBL
+  Hallmark_fisher:
+    category: H
+    subcategory: NULL
+    use_gsea: False 
+    database: MSigDB
+    id_class: ENSEMBL
+  MsigDB_C3:
+    catecory: C3
+    subcategory: "TFT:GTRD"
+    use_gsea: True
+    database: MSigDB
+    id_class: ENSEMBl
+  Reactome_GSEA:
+    category: NULL
+    subcategory: NULL
+    use_gsea: True
+    database: Reactome
+    id_class: ENTREZID
 
 ## Color control
 group_colors:
@@ -85,7 +88,7 @@ group_colors:
 run_mitch: False
 run_carnival:
   vanilla: False
-  inverse: True
+  inverse: False
   sample: False 
   joint_rep: False
 

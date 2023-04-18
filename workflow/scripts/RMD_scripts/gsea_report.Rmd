@@ -26,6 +26,7 @@ if (exists("snakemake")) {
   names(gsea_list) <- names(x = c_groups)
   species_name <- snakemake@config[["organism"]]
   gene_name_type <- snakemake@config[["gene_name_type"]]
+  gsea_conf <- snakemake@config[["gsea"]]
   save_plots <- TRUE
 } else {
   conf <- yaml::read_yaml("../../../config/workflow_unit_test.yaml")
@@ -91,7 +92,7 @@ showing the GSEA result plots for each gene set together with the genes enriched
 with their scores and if they are part of the core enrichment as determined by
 GSEA: 
 
-### GSEA MsigDB Hallmarks {.tabset}
+
 
 
 MSIG db hallmarks results
@@ -175,34 +176,19 @@ create_msig_entries <- function(gsea_res, msig_type, ktype, limit = 30) {
   cat("\n")
 }
 
-create_msig_entries(gsea_result, msig_type = "msig_gsea", ktype = gene_name_type, limit = 20)
 ```
 
+```{r, results='asis'}
+for (gsea_name in names(gsea_conf)) {
+  if (gsea_conf[[gsea_name]]$use_gsea) {
+      cat("\n")
+      cat("### ", gsea_name , " {.tabset} \n")
+      cat("\n")
 
-### GSEA C3 {.tabset}
+      create_msig_entries(gsea_result, msig_type = gsea_name,
+                          ktype = gsea_conf[[gsea_name]][["id_class"]])
+                          limit = 20
+  }
+}
 
-C3 results 
-
-```{r gseac3, results='asis', fig.width=12, fig.height=12, echo = FALSE}
-create_msig_entries(gsea_result, msig_type = "msig_C3", ktype = gene_name_type)
 ```
-
-
-### GSEA C6 {.tabset}
-
-
-C6 results 
-
-```{r gseac6, results='asis', fig.width=12, fig.height=12, echo = FALSE}
-create_msig_entries(gsea_result, msig_type = "msig_C6", ktype = gene_name_type)
-```
-
-
-### GSEA Kegg {.tabset}
-
-Kegg
-
-```{r kegg, results='asis', fig.width=12, fig.height=12, echo = FALSE}
-create_msig_entries(gsea_result, msig_type = "kegg", ktype = "ENTREZID")
-```
-
