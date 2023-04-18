@@ -13,11 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout submodules
-      uses: actions/checkout@v2
-      with:
-        submodules: recursive
+      uses: actions/checkout@v3
     - name: Formatting
-      uses: github/super-linter@v4
+      uses: github/super-linter@v5
       env:
         VALIDATE_ALL_CODEBASE: false
         DEFAULT_BRANCH: main
@@ -49,7 +47,7 @@ jobs:
       with:
         submodules: recursive
     - name: Test workflow
-      uses: snakemake/snakemake-github-action@v1.24.0
+      uses: snakemake/snakemake-github-action@v1
       with:
         directory: './'
         snakefile: workflow/Snakefile
@@ -58,7 +56,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     - name: Test report
-      uses: snakemake/snakemake-github-action@v1.24.0
+      uses: snakemake/snakemake-github-action@v1
       with:
         directory: './'
         snakefile: workflow/Snakefile

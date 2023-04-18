@@ -52,6 +52,29 @@ diffexp:
         - WT
   model: "~cond"
       
+gsea:
+  gene_sets:
+    Hallmark_gsea: 
+      category: H
+      subcategory: NULL
+      use_gsea: True
+      database: MSigDB
+    Hallmark_fisher:
+      category: H
+      subcategory: NULL
+      use_gsea: False 
+      database: MSigDB
+    MsigDB_C3:
+      catecory: C3
+      subcategory: "TFT:GTRD"
+      use_gsea: True
+      database: MSigDB
+    Reactome_GSEA:
+      category: NULL
+      subcategory: NULL
+      use_gsea: True
+      database: Reactome
+
 ## Color control
 group_colors:
   cond:

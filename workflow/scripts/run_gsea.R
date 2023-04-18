@@ -13,6 +13,7 @@ if (exists("snakemake")) {
   LFC_threshold <- snakemake@config[["diffexp"]][["LFC_threshold"]]
   out_file <- snakemake@output[["gsea_result"]]
   organism <- snakemake@config[["organism"]]
+  gsea_config <- snakemake@config[["gsea"]][["gene_sets"]]
 } else {
   conf <- yaml::read_yaml("./configs/VascAge_config.yaml")
   BASE_ANALYSIS_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
@@ -65,37 +66,10 @@ de_genes <- joined_df %>%
 # t_table <- RNAscripts::get_entrezgenes_from_ensembl(filer %>% dplyr::pull(gene), input_type = 'ENSEMBL', org_db =
 # org_db ) %>% RNAscripts::table_to_list(., 'ENTREZID', 'ENSEMBL')
 
+enrich_data <- RNAscripts::run_gsea_query(gsea_genes = ensemblgene_list,
+                              de_genes = de_genes,
+                              gset_config = gsea_config,
+                              species = organism,
+                              org_db = org_db)
 
-msig_enrichment <- RNAscripts::run_msig_enricher(list(de_genes),
-  universe = ensemblgene_list$gene, GSEA = FALSE, translation_table = NULL,
-  msdb_var = "ensembl_gene", input_type = "ENSEMBL", category = "H", species = organism
-)[[1]]
-
-# Run the MSIG enricher
-msig_gsea <- RNAscripts::run_msig_enricher(list(ensemblgene_list),
-  translation_table = NULL, msdb_var = "ensembl_gene", input_type = "ENSEMBL",
-  category = "H", eps = 0, species = organism
-)[[1]]
-
-msig_c3 <- RNAscripts::run_msig_enricher(list(ensemblgene_list),
-  translation_table = NULL, subcategory = "TFT:GTRD", msdb_var = "ensembl_gene",
-  input_type = "ENSEMBL", category = "C3", eps = 0, species = organism
-)[[1]]
-
-msig_c6 <- RNAscripts::run_msig_enricher(list(ensemblgene_list),
-  translation_table = NULL, msdb_var = "ensembl_gene", input_type = "ENSEMBL",
-  category = "C6", eps = 0, species = organism
-)[[1]]
-gc()
-### BUGGED
-# kegg <- RNAscripts::run_gsea(ensemblgene_list, input_type = "ENSEMBL", p_valcut = 0.05, species = organism)
-kegg <- NULL
-g_vec <- RNAscripts::get_entrezgene_vector(ensemblgene_list, "ENSEMBL", org_db = org_db)
-
-reactome_stuff <- ReactomePA::gsePathway(g_vec, organism = tolower(RNAscripts::get_organism_omnipath_name(organism)), verbose = TRUE)
-
-enrich_list <- list(
-  msig_enrichment = msig_enrichment, msig_gsea = msig_gsea, msig_C3 = msig_c3, msig_C6 = msig_c6, kegg = kegg,
-  reactome_stuff = reactome_stuff
-)
-saveRDS(object = enrich_list, file = out_file)
+saveRDS(object = enrich_data, file = out_file)
