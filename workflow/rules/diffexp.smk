@@ -131,7 +131,7 @@ rule run_gsea:
         "../envs/R_4.yaml"
     log:
         "logs/run_gsea/{condition}_{contrast}.log",
-    threads: 1
+    threads: 4
     resources:
         time_min=59 * 4,
         mem_mb=8192 * 7,

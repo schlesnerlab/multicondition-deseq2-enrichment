@@ -183,42 +183,38 @@ run_msig_enricher <- function(gset_list, category = NULL, species = "Mus musculu
 #' @return List with results enrichment analysis \link[DOSE]{enrichResult-class}
 #' @export
 #' 
-run_gsea_query <- function(gsea_genes, de_genes,
+run_gsea_query <- function(gsea_genes, de_genes, gset_name, 
                           gset_config, species, org_db) {
-  enrich_obj <- list()
-  for (gset in names(gset_config)) {
-    run_settings <- gset_config[[gset]]
-    if (run_settings$use_gsea) {
-      gene_list <- gsea_genes
-    } else {
-      gene_list <- de_genes
-    }
-    if (tolower(run_settings$database) == "msigdb") {
-      enrich_obj[[gset]] <- RNAscripts::run_msig_enricher(gset_list = list(gene_list),
-                                  GSEA = run_settings$use_gsea,
-                                  category = run_settings$gene_set,
-                                  subcategory = run_settings$subcategory,
-                                  species = species,
-                                  msdb_var = "ensembl_gene", 
-                                  input_type = "ENSEMBL",
-                                #  eps = 0
-                                  )[[1]]
-    } else if (tolower(run_settings$database) == "kegg") {
-      enrich_obj[[gset]] <- RNAscripts::run_gsea(gene_list,
-                            input_type = "ENSEMBL", 
-                            p_valcut = 0.05, 
-                            species = species)
-    } else if (tolower(run_settings$database) == "reactome") {
-      g_vec <- RNAscripts::get_entrezgene_vector(gene_list, "ENSEMBL", 
-                                                 org_db = org_db)
-      enrich_obj[[gset]] <- ReactomePA::gsePathway(g_vec,
-                                                   tolower(RNAscripts::get_organism_omnipath_name(organism)),
-                                                   )
-    } else {
-      stop(glue::glue("{database} not supported, pleasue use MSigDB, kegg or Reactome"))
-    }
-    gc()
+  run_settings <- gset_config[[gset_name]]
+  if (run_settings$use_gsea) {
+    gene_list <- gsea_genes
+  } else {
+    gene_list <- de_genes
   }
+  if (tolower(run_settings$database) == "msigdb") {
+    enrich_obj <- RNAscripts::run_msig_enricher(gset_list = list(gene_list),
+                                GSEA = run_settings$use_gsea,
+                                category = run_settings$gene_set,
+                                subcategory = run_settings$subcategory,
+                                species = species,
+                                msdb_var = "ensembl_gene", 
+                                input_type = "ENSEMBL"
+                                )
+  } else if (tolower(run_settings$database) == "kegg") {
+    enrich_obj <- RNAscripts::run_gsea(gene_list,
+                          input_type = "ENSEMBL", 
+                          p_valcut = 0.05, 
+                          species = species)
+  } else if (tolower(run_settings$database) == "reactome") {
+    g_vec <- RNAscripts::get_entrezgene_vector(gene_list, "ENSEMBL", 
+                                               org_db = org_db)
+    enrich_obj <- ReactomePA::gsePathway(g_vec,
+                                                 tolower(RNAscripts::get_organism_omnipath_name(organism)),
+                                                 )
+  } else {
+    stop(glue::glue("{database} not supported, pleasue use MSigDB, kegg or Reactome"))
+  }
+  gc()
   enrich_obj
 }
 

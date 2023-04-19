@@ -1,5 +1,6 @@
 library(clusterProfiler)
 library(magrittr)
+library(furrr)
 # library(tidyverse)
 
 ## Snakemake header
@@ -14,6 +15,7 @@ if (exists("snakemake")) {
   out_file <- snakemake@output[["gsea_result"]]
   organism <- snakemake@config[["organism"]]
   gsea_config <- snakemake@config[["gsea"]]
+  plan(strategy = multicore, workers = snakemake@threads)
 } else {
   conf <- yaml::read_yaml("./configs/VascAge_config.yaml")
   BASE_ANALYSIS_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
@@ -28,6 +30,7 @@ if (exists("snakemake")) {
   LFC_threshold <- 0.5
   organism <- "Mus musculus"
   gsea_use_stat <- TRUE
+  plan(strategy = sequential)
 }
 org_db <- RNAscripts::get_org_db(organism)
 
@@ -66,7 +69,8 @@ de_genes <- joined_df %>%
 # t_table <- RNAscripts::get_entrezgenes_from_ensembl(filer %>% dplyr::pull(gene), input_type = 'ENSEMBL', org_db =
 # org_db ) %>% RNAscripts::table_to_list(., 'ENTREZID', 'ENSEMBL')
 
-enrich_data <- RNAscripts::run_gsea_query(gsea_genes = ensemblgene_list,
+enrich_data <- furrr::future_map(names(gsea_config), RNAscripts::run_gsea_query,
+                              gsea_genes = ensemblgene_list,
                               de_genes = de_genes,
                               gset_config = gsea_config,
                               species = organism,
