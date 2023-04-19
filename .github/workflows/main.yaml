@@ -11,13 +11,18 @@ on:
 jobs:
   formatting:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+
     steps:
-    - name: Checkout submodules
-      uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v3
       with: 
         fetch-depth: 0 
-        submodules: recursive
-    - name: Formatting
+
+    - name: Run R and snakefmt Code 
       uses: github/super-linter@v5
       env:
         VALIDATE_ALL_CODEBASE: false
