@@ -43,7 +43,7 @@ diffexp:
   gsea_use_stat: False
   pval_threshold: 0.05 
   LFC_threshold: 0.5
-  shrink_lfc: True
+  shrink_lfc: False
     # contrasts for the deseq2 results method
   contrasts:
     cond: # Here column in sample sheet 
