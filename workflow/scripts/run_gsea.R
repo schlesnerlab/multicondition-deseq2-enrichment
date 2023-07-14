@@ -75,5 +75,6 @@ enrich_data <- furrr::future_map(names(gsea_config), RNAscripts::run_gsea_query,
                               gset_config = gsea_config,
                               species = organism,
                               org_db = org_db)
+names(enrich_data) <- names(gsea_config)
 
 saveRDS(object = enrich_data, file = out_file)

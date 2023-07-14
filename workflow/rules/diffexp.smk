@@ -153,8 +153,8 @@ rule gsea_report:
         "logs/gsea_report/{condition}.log",
     threads: 1
     resources:
-        time_min=59 * 10,
-        mem_mb=8192 * 2,
+        time_min=59 * 20,
+        mem_mb=8192 * 6,
     script:
         "../scripts/RMD_scripts/gsea_report.Rmd"
 

@@ -14,6 +14,7 @@ dependencies:
   - bioconductor-complexheatmap
   - bioconductor-delayedarray
   - bioconductor-do.db
+  - bioconductor-edger
   - bioconductor-enhancedvolcano
   - bioconductor-genefilter
   - bioconductor-geneplotter

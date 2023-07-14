@@ -4,12 +4,14 @@
 \alias{run_gsea_query}
 \title{Function to run all gsea queries based on config file}
 \usage{
-run_gsea_query(gsea_genes, de_genes, gset_config, species, org_db)
+run_gsea_query(gsea_genes, de_genes, gset_name, gset_config, species, org_db)
 }
 \arguments{
 \item{gsea_genes}{tibble with gene ids in first column and gsea statistic in second}
 
 \item{de_genes}{tibble with DE genes in first column}
+
+\item{gset_name}{Name of gene set in config to analyze}
 
 \item{gset_config}{gset config object}
 

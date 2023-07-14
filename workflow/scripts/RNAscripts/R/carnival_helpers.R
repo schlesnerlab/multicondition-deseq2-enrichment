@@ -212,20 +212,33 @@ df_to_viper_regulon <- function(df) {
 #' rename ENSG IDS from OTP using fpkm table
 #'
 #' @param count_table Table with ENSG IDs with version as rownames
-#' @param fpkm_table FPKM table from rna-star-deseq pipeline `fpkm/all.tsv`
-#'
+#' @param fpkm_table FPKM table from rna-star-deseq pipeline `fpkm/all.tsv` as tibble
+#' @param fpkm_col column name of genes in fpkm table
+#' @param tibble_col If count_table is tibble give tibble col
 #' @return
 #' @export
 #'
 #' @examples
 #' NULL
-rename_count_rownames <- function(count_table, fpkm_table) {
-  filer <- fpkm_table %>%
-    dplyr::filter(gene %in% rownames(count_table)) %>%
-    dplyr::filter(!duplicated(gname))
+rename_count_rownames <- function(count_table, fpkm_table, fpkm_col = "gene", tibble_col = NULL) {
 
-  count_table <- count_table[filer$gene, ]
-  rownames(count_table) <- filer$gname
+  # Check if tibble or data.frame
+  if(tibble::is_tibble(count_table)) {
+    stopifnot("tibble_col must be defined when count_table is tibble" = 
+                !is.null(tibble_col))
+    filer <- fpkm_table %>% dplyr::filter(!duplicated(gname)) %>% dplyr::select(gene, gname)                               
+
+    count_table %>% dplyr::filter(!!sym(tibble_col) %in% filer$gene) -> count_table
+    by_vec <- fpkm_col
+    names(by_vec) <- tibble_col
+    dplyr::left_join(count_table, filer, by = by_vec) -> count_table
+  } else {
+    filer <- fpkm_table %>%
+    dplyr::filter(gene %in% rownames(count_table)) %>%
+    dplyr::filter(!duplicated(gname)) %>% dplyr::select(gene, gname)
+    count_table <- count_table[filer$gene, ]
+    rownames(count_table) <- filer$gname
+  }
   count_table
 }
 

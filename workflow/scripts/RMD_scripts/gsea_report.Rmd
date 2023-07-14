@@ -29,7 +29,7 @@ if (exists("snakemake")) {
   gsea_conf <- snakemake@config[["gsea"]]
   save_plots <- TRUE
 } else {
-  conf <- yaml::read_yaml("../../../config/workflow_unit_test.yaml")
+  conf <- yaml::read_yaml("../../../configs/VascAge_Apelin_config.yaml")
   BASE_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
   cond_id <- names(conf$diffexp$contrasts)[1]
   gsea_list <- as.list(file.path(BASE_DIR, glue::glue("results/diffexp/{cond_id}/{names(conf$diffexp$contrasts[[cond_id]])}.gseares.RDS")))
@@ -39,8 +39,10 @@ if (exists("snakemake")) {
   plot_path <- "/home/heyer/tmp/"
   species_name <- "Mus musculus"
   gene_name_type <- "ENSEMBL"
-  save_plots <- TRUE
+  save_plots <- FALSE
+  gsea_conf <- conf$gsea
 }
+limit <-  10
 ```
 
 ## GSEA report
@@ -60,23 +62,25 @@ create_all_gsea_plots <- function(msig_list, contrast_n, limit = 30, plot_type, 
     sig_ids <- msig_list@result$ID[1:limit]
   }
   all_plots <- purrr::map(sig_ids, function(gset_id) {
-    enrichplot::gseaplot2(
+    p <- enrichplot::gseaplot2(
       x = msig_list,
       geneSetID = gset_id,
       title = msig_list[gset_id, ]$Description
     )
+    aplot::as.patchwork(p)
   })
   names(all_plots) <- sig_ids
   if (save_plots) {
-    gsea_plot_path <- glue::glue("{plot_path}/{plot_type}", recursive = T)
+    gsea_plot_path <- glue::glue("{plot_path}/{contrast_n}/{plot_type}", recursive = T)
     dir.create(gsea_plot_path, recursive = T)
     purrr::map2(all_plots, sig_ids, function(p, n) {
-      ggsave(plot = aplot::as.patchwork(p), filename = file.path(gsea_plot_path, paste0(n, "_gseaplot.svgz")), device = svglite)
+      ggsave(plot = p, filename = file.path(gsea_plot_path, paste0(n, "_gseaplot.svgz")), device = svglite)
     })
   }
   all_plots
 }
 gsea_result <- purrr::map(gsea_list, readRDS)
+
 ```
 
 
@@ -119,7 +123,7 @@ build_gene_set_detail <- function(gset_res, gset_name, inkey) {
 }
 
 
-create_msig_entries <- function(gsea_res, msig_type, ktype, limit = 30) {
+create_msig_entries <- function(gsea_res, msig_type, ktype, limit = 20) {
   stopifnot(!is.null(names(gsea_res)))
   for (set_n in names(gsea_res)) {
     cat("#### ", set_n, " {.tabset} \n")
@@ -161,6 +165,7 @@ create_msig_entries <- function(gsea_res, msig_type, ktype, limit = 30) {
       cat("##### ", sig_gset, " \n")
 
       print(all_plots[[sig_gset]])
+      
       cat("\n")
       gene_enrich_table <- build_gene_set_detail(msig_res,
         gset_name = sig_gset,
@@ -174,9 +179,12 @@ create_msig_entries <- function(gsea_res, msig_type, ktype, limit = 30) {
     cat("\n \n")
   }
   cat("\n")
+
 }
 
 ```
+
+Here Results are put out
 
 ```{r, results='asis'}
 for (gsea_name in names(gsea_conf)) {
@@ -186,8 +194,11 @@ for (gsea_name in names(gsea_conf)) {
       cat("\n")
 
       create_msig_entries(gsea_result, msig_type = gsea_name,
-                          ktype = gsea_conf[[gsea_name]][["id_class"]])
-                          limit = 20
+                          ktype = gsea_conf[[gsea_name]][["id_class"]],
+                          limit = limit)
+      cat("\n")
+      cat("\n")
+      gc()
   }
 }
 

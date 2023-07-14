@@ -176,6 +176,7 @@ run_msig_enricher <- function(gset_list, category = NULL, species = "Mus musculu
 #'
 #' @param gsea_genes tibble with gene ids in first column and gsea statistic in second
 #' @param de_genes tibble with DE genes in first column
+#' @param gset_name Name of gene set in config to analyze
 #' @param gset_config gset config object
 #' @param species species name
 #' @param org_db org.mm.eg.db
@@ -194,12 +195,12 @@ run_gsea_query <- function(gsea_genes, de_genes, gset_name,
   if (tolower(run_settings$database) == "msigdb") {
     enrich_obj <- RNAscripts::run_msig_enricher(gset_list = list(gene_list),
                                 GSEA = run_settings$use_gsea,
-                                category = run_settings$gene_set,
+                                category = run_settings$category,
                                 subcategory = run_settings$subcategory,
                                 species = species,
                                 msdb_var = "ensembl_gene", 
                                 input_type = "ENSEMBL"
-                                )
+                                )[[1]]
   } else if (tolower(run_settings$database) == "kegg") {
     enrich_obj <- RNAscripts::run_gsea(gene_list,
                           input_type = "ENSEMBL", 
