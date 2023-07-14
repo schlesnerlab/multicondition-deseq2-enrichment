@@ -258,7 +258,6 @@ we run a gene set analysis (GSA) based on a list of significant genes (CARNIVAL 
 It uses Fisher’s exact test.
 
 ```{r enrichment, message=FALSE, results='hide', warning=FALSE}
-
 ```
 
 # Topological measurments
@@ -282,7 +281,6 @@ To find out more about this topic:
 + https://www.networksciencebook.com/chapter/2#degree
 
 ```{r netopology, message=FALSE, results='hide', warning=FALSE}
-
 get_common_interactions <- function(interaction_list, psmpl_per = 95,
                                     s_table = sample_table,
                                     condition_sel) {
@@ -290,17 +288,17 @@ get_common_interactions <- function(interaction_list, psmpl_per = 95,
     filter(condition %in% condition_sel) %>%
     pull(sample)
   interaction_list <- interaction_list[, sample_id_list]
-  
+
   if (!is.null(dim(interaction_list))) {
     shared_interactions_WT <- getCoreInteractions(topology = interaction_list, psmpl = psmpl_per)
-    
+
     # Visualise the interactions
     colnames(shared_interactions_WT) <- c("from", "sign", "to")
     labels_edge <- c("-1" = "inhibition", "1" = "activation")
     nodes <- data.frame(union(shared_interactions_WT$from, shared_interactions_WT$to))
     colnames(nodes) <- "nodes"
     nodes$label <- nodes$nodes
-    
+
     gg_graph <- tidygraph::tbl_graph(nodes = nodes, edges = shared_interactions_WT) %>%
       ggraph::ggraph(layout = "auto") +
       geom_node_point(color = "#C0C0C0", size = 8) +
@@ -390,7 +388,6 @@ We compare both in one sample group, but we also have a look which edges are con
 aka. combined_young == young-ec + young-EC_apeliun
 
 ```{r, fig.width= 8, fig.height=8}
-
 groups_to_check <- c(
   workflow_config$comp_groups,
   as.list(setNames(
@@ -401,7 +398,7 @@ groups_to_check <- c(
 
 
 yoted <- purrr::map(groups_to_check, get_common_interactions, interaction_list = interactions, psmpl_per = 60, s_table = sample_table[!lgl_index, ])
-if(any(purrr::map(yoted, is.null))) {
+if (any(purrr::map(yoted, is.null))) {
   null_index <- purrr::map_lgl(yoted, is.null)
   yoted <- yoted[!null_index]
 }
@@ -411,8 +408,6 @@ yoted
 ```
 
 ```{r, fig.height = 12}
-
-
 build_matrix_from_nodes <- function(node_list, node_type = "AvgAct") {
   gene_index <- purrr::map(node_list, ~ pull(., Node)) %>%
     unlist() %>%

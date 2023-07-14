@@ -6,9 +6,10 @@ output: html_document
 ---
 
 ```{r, echo = F, include=F}
-contrast_groups <- ifelse(exists("snakemake"), 
-  snakemake@wildcards[["contrast"]], 
-  "")
+contrast_groups <- ifelse(exists("snakemake"),
+  snakemake@wildcards[["contrast"]],
+  ""
+)
 ```
 
 # Carnival results from deseq2 for `r contrast_groups`
@@ -54,8 +55,10 @@ if (exists("snakemake")) {
   yaml <- yaml::read_yaml("../../../configs/VascAge_cre_config.yaml")
   comp_group <- names(yaml$diffexp$contrasts$condition)[1]
   base_path <- yaml$dirs$BASE_ANALYSIS_DIR
-  carnival_path <- file.path(base_path, "results/inversecarnival",
-                             glue::glue("{comp_group}_carnival_res.RDS.gz"))
+  carnival_path <- file.path(
+    base_path, "results/inversecarnival",
+    glue::glue("{comp_group}_carnival_res.RDS.gz")
+  )
 
   tt_basepath <- "../transcriptutorial"
   out_file <- ""
@@ -68,10 +71,16 @@ process_carnival <- function(carnival_res) {
   carnival_res
 }
 msig_h <- msigdbr::msigdbr(organism, "C2", )
-pathways<- loadGSC(file = dplyr::select(msig_h,
-                      c("gene_symbol", "gs_name")),
-                   addInfo = dplyr::select(msig_h,
-                      c("gs_name", "gs_description")))
+pathways <- loadGSC(
+  file = dplyr::select(
+    msig_h,
+    c("gene_symbol", "gs_name")
+  ),
+  addInfo = dplyr::select(
+    msig_h,
+    c("gs_name", "gs_description")
+  )
+)
 ```
 
 
@@ -86,55 +95,60 @@ Node activität relates to the change in expression between the comparison group
 Positive values <- Group1, negative values Group2.
 
 ```{r GSEA analysis}
-
 carnival_result <- readRDS(carnival_path)
-if(length(carnival_result) == 0) {
+if (length(carnival_result) == 0) {
   write("CARNIVAL FAILED", file = out_file)
   quit(save = "no", status = 0)
 }
 
 carnival_result <- process_carnival(carnival_result)
-nodes_carnival  <- extractCARNIVALnodes(carnival_result)
+nodes_carnival <- extractCARNIVALnodes(carnival_result)
 
-sig_pathways    <- runGSAhyper(genes = nodes_carnival$sucesses,
-    universe = nodes_carnival$bg, gsc = pathways)
-sig_pathways_df <- as.data.frame(sig_pathways$resTab)  %>%
+sig_pathways <- runGSAhyper(
+  genes = nodes_carnival$sucesses,
+  universe = nodes_carnival$bg, gsc = pathways
+)
+sig_pathways_df <- as.data.frame(sig_pathways$resTab) %>%
   tibble::rownames_to_column(var = "pathway")
 
 pathways_select <- sig_pathways_df %>%
-    dplyr::select(pathway, `p-value`, `Adjusted p-value`) %>%
-    dplyr::filter(`Adjusted p-value` <= 0.05) %>% # Signficance value fixed for now
-    dplyr::rename(pvalue = `p-value`, AdjPvalu = `Adjusted p-value`) %>% 
-    dplyr::mutate(pathway = as.factor(pathway))
+  dplyr::select(pathway, `p-value`, `Adjusted p-value`) %>%
+  dplyr::filter(`Adjusted p-value` <= 0.05) %>% # Signficance value fixed for now
+  dplyr::rename(pvalue = `p-value`, AdjPvalu = `Adjusted p-value`) %>%
+  dplyr::mutate(pathway = as.factor(pathway))
 
 
 pathways_select <- data.frame(t(apply(pathways_select, 1, function(r) {
-  aux <- unlist(strsplit( sub("_",";", r["pathway"]), ";"))
+  aux <- unlist(strsplit(sub("_", ";", r["pathway"]), ";"))
   r["pathway"] <- gsub("_", " ", aux[2])
   return(c(r, "source" = aux[1]))
 })))
 
 if (ncol(pathways_select) == 4) {
-  colnames(pathways_select) = c("pathway", "pvalue", "AdjPvalu", "source")
-  pathways_select$AdjPvalu = as.numeric(pathways_select$AdjPvalu)
+  colnames(pathways_select) <- c("pathway", "pvalue", "AdjPvalu", "source")
+  pathways_select$AdjPvalu <- as.numeric(pathways_select$AdjPvalu)
 
-    ggdata = pathways_select %>%
-      dplyr::slice_min(AdjPvalu, n = 25) %>%
-      dplyr::filter(AdjPvalu <= 0.05) %>%
-      dplyr::group_by(source) %>%
-      dplyr::arrange(AdjPvalu) %>%
-      dplyr::slice(1:5)
+  ggdata <- pathways_select %>%
+    dplyr::slice_min(AdjPvalu, n = 25) %>%
+    dplyr::filter(AdjPvalu <= 0.05) %>%
+    dplyr::group_by(source) %>%
+    dplyr::arrange(AdjPvalu) %>%
+    dplyr::slice(1:5)
 
-# Visualize top results
-  ggplot(ggdata, aes(y = reorder(pathway, -log10(AdjPvalu)), 
-      x = -log10(AdjPvalu)), color = source) + 
-      facet_grid(source ~ ., scales="free", space = "free") +
-        geom_bar(stat = "identity") +
-        annotation_logticks(sides = "bt") +
-        theme_bw() +
-        theme(axis.title = element_text(face = "bold", size = 12),
-              axis.text.y = element_text(size = 6)) +
-        ylab("")
+  # Visualize top results
+  ggplot(ggdata, aes(
+    y = reorder(pathway, -log10(AdjPvalu)),
+    x = -log10(AdjPvalu)
+  ), color = source) +
+    facet_grid(source ~ ., scales = "free", space = "free") +
+    geom_bar(stat = "identity") +
+    annotation_logticks(sides = "bt") +
+    theme_bw() +
+    theme(
+      axis.title = element_text(face = "bold", size = 12),
+      axis.text.y = element_text(size = 6)
+    ) +
+    ylab("")
 }
 ```
 
@@ -144,9 +158,7 @@ Carnival network plots give an overview of the network inferred by carnival.
 Changes reflect the comparison based on the comparison group from this document
 
 ```{r pressure, fig.height=10, fig.width=16}
-
 plot_carn_network <- function(carn_res) {
-
   ed <- carn_res$weightedSIF
   colnames(ed) <- c("from", "sign", "to", "weight")
   nod <- data.frame(union(ed$from, ed$to))
@@ -154,19 +166,22 @@ plot_carn_network <- function(carn_res) {
   colnames(nod) <- "nodes"
   nod$label <- nod$nodes
   joined_nod <- left_join(nod, carn_res$nodesAttributes,
-                            by = c("label" = "Node"))
-  yote <- tidygraph::tbl_graph(nodes = joined_nod,
-                       edges = ed
+    by = c("label" = "Node")
+  )
+  yote <- tidygraph::tbl_graph(
+    nodes = joined_nod,
+    edges = ed
   ) %>%
-  ggraph(layout = "auto") +
+    ggraph(layout = "auto") +
     geom_node_point(aes(color = AvgAct), size = 8) + scale_color_gradient2() +
-    geom_edge_link(arrow = arrow(), aes(edge_colour = as.factor(sign),
-      edge_alpha = weight)) +
-    theme_graph() +  geom_node_text(aes(label = label), vjust = 0.4, repel = T)
+    geom_edge_link(arrow = arrow(), aes(
+      edge_colour = as.factor(sign),
+      edge_alpha = weight
+    )) +
+    theme_graph() + geom_node_text(aes(label = label), vjust = 0.4, repel = T)
   yote
 }
 
 plot_carn_network(carnival_result) + ggtitle(comp_group)
-
 ```
 

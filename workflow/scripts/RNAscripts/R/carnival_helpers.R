@@ -61,7 +61,7 @@ convertHumanGeneHomologs <-
     } else {
       stop("input_organism not supported choose Mus musculus or Homo sapiens")
     }
-    
+
     gene_list
   }
 
@@ -97,11 +97,13 @@ generateTFList <- function(df = df,
   for (ii in seq_along(ctrl)) {
     tfThresh <- sort(x = abs(df[, ctrl[ii]]), decreasing = TRUE)[top]
     temp <- which(abs(df[, ctrl[ii]]) >= tfThresh)
-    currDF <- matrix(data = ,
-                     nrow = 1,
-                     ncol = top)
+    currDF <- matrix(
+      data = ,
+      nrow = 1,
+      ncol = top
+    )
     colnames(currDF) <- rownames(df)[temp[1:top]]
-    currDF[1,] <- df[temp[1:top], ctrl[ii]]
+    currDF[1, ] <- df[temp[1:top], ctrl[ii]]
     currDF <- as.data.frame(currDF)
     returnList[[length(returnList) + 1]] <- currDF
   }
@@ -141,29 +143,33 @@ assignPROGENyScores <-
     }
     for (ii in seq_along(pathways)) {
       mm <- progenyMembers[[which(names(progenyMembers) ==
-                                    pathways[ii])]]
+        pathways[ii])]]
       for (jj in seq_along(mm)) {
         members <- rbind(members, c(pathways[ii], mm[jj]))
       }
     }
-    members <- members[-1,]
+    members <- members[-1, ]
     scores <-
-      matrix(data = ,
-             nrow = nrow(progeny),
-             ncol = nrow(members))
+      matrix(
+        data = ,
+        nrow = nrow(progeny),
+        ncol = nrow(members)
+      )
     colnames(scores) <- members[, 2]
     rownames(scores) <- rownames(progeny)
     members <- unique(members)
     for (i in 1:ncol(scores)) {
       for (j in 1:nrow(scores)) {
-        scores[j, i] <- as.numeric(progeny[j, members[which(members[,
-                                                                    2] == colnames(scores)[i]), 1]])
+        scores[j, i] <- as.numeric(progeny[j, members[which(members[
+          ,
+          2
+        ] == colnames(scores)[i]), 1]])
       }
     }
     pxList <- list()
     for (ii in seq_along(access_idx)) {
       pxList[[length(pxList) + 1]] <-
-        as.data.frame(t(as.matrix(scores[access_idx[ii],])))
+        as.data.frame(t(as.matrix(scores[access_idx[ii], ])))
     }
     names(pxList) <- rownames(progeny)[ctrl]
     return(pxList)
@@ -183,8 +189,8 @@ assignPROGENyScores <-
 #' is ready to be used as a regulon set in viper.
 df_to_viper_regulon <- function(df) {
   names(df) <- c("feature", "pathway", "sign")
-  df <- df[complete.cases(df),]
-  
+  df <- df[complete.cases(df), ]
+
   pathway_regulon <- list(0)
   i <- 1
   for (pathway in unique(df$pathway))
@@ -195,7 +201,7 @@ df_to_viper_regulon <- function(df) {
     pathway_feature_list[[1]] <- features
     pathway_feature_list[[2]] <- rep(1, length(features))
     names(pathway_feature_list) <- c("tfmode", "likelihood")
-    
+
     pathway_regulon[[i]] <- pathway_feature_list
     i <- i + 1
   }
@@ -206,20 +212,33 @@ df_to_viper_regulon <- function(df) {
 #' rename ENSG IDS from OTP using fpkm table
 #'
 #' @param count_table Table with ENSG IDs with version as rownames
-#' @param fpkm_table FPKM table from rna-star-deseq pipeline `fpkm/all.tsv`
-#'
+#' @param fpkm_table FPKM table from rna-star-deseq pipeline `fpkm/all.tsv` as tibble
+#' @param fpkm_col column name of genes in fpkm table
+#' @param tibble_col If count_table is tibble give tibble col
 #' @return
 #' @export
 #'
 #' @examples
 #' NULL
-rename_count_rownames <- function(count_table, fpkm_table) {
-  filer <- fpkm_table %>%
+rename_count_rownames <- function(count_table, fpkm_table, fpkm_col = "gene", tibble_col = NULL) {
+
+  # Check if tibble or data.frame
+  if(tibble::is_tibble(count_table)) {
+    stopifnot("tibble_col must be defined when count_table is tibble" = 
+                !is.null(tibble_col))
+    filer <- fpkm_table %>% dplyr::filter(!duplicated(gname)) %>% dplyr::select(gene, gname)                               
+
+    count_table %>% dplyr::filter(!!sym(tibble_col) %in% filer$gene) -> count_table
+    by_vec <- fpkm_col
+    names(by_vec) <- tibble_col
+    dplyr::left_join(count_table, filer, by = by_vec) -> count_table
+  } else {
+    filer <- fpkm_table %>%
     dplyr::filter(gene %in% rownames(count_table)) %>%
-    dplyr::filter(!duplicated(gname))
-  
-  count_table <- count_table[filer$gene,]
-  rownames(count_table) <- filer$gname
+    dplyr::filter(!duplicated(gname)) %>% dplyr::select(gene, gname)
+    count_table <- count_table[filer$gene, ]
+    rownames(count_table) <- filer$gname
+  }
   count_table
 }
 
@@ -239,7 +258,7 @@ process_carnival <- function(carnival_res) {
     as.numeric(carnival_res$weightedSIF$Sign)
   carnival_res$weightedSIF$Weight <-
     as.numeric(carnival_res$weightedSIF$Weight)
-  
+
   carnival_res$nodesAttributes <-
     data.frame(carnival_res$nodesAttributes, stringsAsFactors = F)
   carnival_res$nodesAttributes$ZeroAct <-

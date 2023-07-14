@@ -40,9 +40,10 @@ pca:
     - cond
 
 diffexp:
+  gsea_use_stat: False
   pval_threshold: 0.05 
   LFC_threshold: 0.5
-  shrink_lfc: True
+  shrink_lfc: False
     # contrasts for the deseq2 results method
   contrasts:
     cond: # Here column in sample sheet 
@@ -51,6 +52,32 @@ diffexp:
         - WT
   model: "~cond"
       
+gsea:
+  Hallmark_gsea: 
+    category: H
+    subcategory: NULL
+    use_gsea: True
+    database: MSigDB
+    id_class: ENSEMBL
+  Hallmark_fisher:
+    category: H
+    subcategory: NULL
+    use_gsea: False 
+    database: MSigDB
+    id_class: ENSEMBL
+  MsigDB_C3:
+    catecory: C3
+    subcategory: "TFT:GTRD"
+    use_gsea: True
+    database: MSigDB
+    id_class: ENSEMBl
+  Reactome_GSEA:
+    category: NULL
+    subcategory: NULL
+    use_gsea: True
+    database: Reactome
+    id_class: ENTREZID
+
 ## Color control
 group_colors:
   cond:
@@ -61,7 +88,7 @@ group_colors:
 run_mitch: False
 run_carnival:
   vanilla: False
-  inverse: True
+  inverse: False
   sample: False 
   joint_rep: False
 

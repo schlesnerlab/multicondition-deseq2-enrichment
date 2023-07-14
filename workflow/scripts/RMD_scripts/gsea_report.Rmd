@@ -8,8 +8,10 @@ fig_height: 9
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, dev = "png", 
-                      fig.width = 12, fig.height = 12)
+knitr::opts_chunk$set(
+  echo = FALSE, warning = FALSE, message = FALSE, dev = "png",
+  fig.width = 12, fig.height = 12
+)
 library(purrr)
 library(clusterProfiler)
 library(magrittr)
@@ -20,23 +22,27 @@ if (exists("snakemake")) {
   gsea_list <- snakemake@input[["gsea_result"]]
   plot_path <- snakemake@params[["plot_path"]]
   c_groups <- snakemake@params[["contrast_groups"]]
-  write(unlist(c_groups), file=stderr())
+  write(unlist(c_groups), file = stderr())
   names(gsea_list) <- names(x = c_groups)
   species_name <- snakemake@config[["organism"]]
   gene_name_type <- snakemake@config[["gene_name_type"]]
+  gsea_conf <- snakemake@config[["gsea"]]
+  save_plots <- TRUE
 } else {
-
-  conf <- yaml::read_yaml("../../../configs/tec_aplnrKO.yaml")
+  conf <- yaml::read_yaml("../../../configs/VascAge_Apelin_config.yaml")
   BASE_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
   cond_id <- names(conf$diffexp$contrasts)[1]
   gsea_list <- as.list(file.path(BASE_DIR, glue::glue("results/diffexp/{cond_id}/{names(conf$diffexp$contrasts[[cond_id]])}.gseares.RDS")))
   c_groups <- names(conf$diffexp$contrasts[[cond_id]])
   names(gsea_list) <- c_groups
- #  gsea_list <- gsea_list[1:3]
-  plot_path <- "plots"
+  #  gsea_list <- gsea_list[1:3]
+  plot_path <- "/home/heyer/tmp/"
   species_name <- "Mus musculus"
   gene_name_type <- "ENSEMBL"
+  save_plots <- FALSE
+  gsea_conf <- conf$gsea
 }
+limit <-  10
 ```
 
 ## GSEA report
@@ -46,8 +52,7 @@ for the Vascular Aging Project. Results are shown for each sample group and for 
 GSEA gene set tested. 
 
 ```{r Parse data}
-
-create_all_gsea_plots <- function(msig_list, contrast_n, limit = 30, type, save_plots = F) {
+create_all_gsea_plots <- function(msig_list, contrast_n, limit = 30, plot_type, save_plots = F) {
   if (is.list(msig_list)) {
     msig_list <- msig_list[[1]]
   }
@@ -57,23 +62,25 @@ create_all_gsea_plots <- function(msig_list, contrast_n, limit = 30, type, save_
     sig_ids <- msig_list@result$ID[1:limit]
   }
   all_plots <- purrr::map(sig_ids, function(gset_id) {
-    enrichplot::gseaplot2(
+    p <- enrichplot::gseaplot2(
       x = msig_list,
       geneSetID = gset_id,
       title = msig_list[gset_id, ]$Description
     )
+    aplot::as.patchwork(p)
   })
   names(all_plots) <- sig_ids
   if (save_plots) {
-    gsea_plot_path <- glue::glue("{plot_path}/{contrast_n}_plots/{type}", recursive = T)
+    gsea_plot_path <- glue::glue("{plot_path}/{contrast_n}/{plot_type}", recursive = T)
     dir.create(gsea_plot_path, recursive = T)
     purrr::map2(all_plots, sig_ids, function(p, n) {
-      ggsave(plot = p, filename = file.path(gsea_plot_path,paste0( n, "_gseaplot.svgz")),device = svglite)
+      ggsave(plot = p, filename = file.path(gsea_plot_path, paste0(n, "_gseaplot.svgz")), device = svglite)
     })
   }
   all_plots
 }
 gsea_result <- purrr::map(gsea_list, readRDS)
+
 ```
 
 
@@ -89,7 +96,7 @@ showing the GSEA result plots for each gene set together with the genes enriched
 with their scores and if they are part of the core enrichment as determined by
 GSEA: 
 
-### GSEA MsigDB Hallmarks {.tabset}
+
 
 
 MSIG db hallmarks results
@@ -107,7 +114,7 @@ build_gene_set_detail <- function(gset_res, gset_name, inkey) {
     dplyr::filter(!!rlang::sym(inkey) %in% gset_res@geneSets[[gset_name]]) %>%
     mutate(core_enrichment = ifelse(!!rlang::sym(inkey) %in% ensembl_names, "YES", "NO"))
   org_db <- RNAscripts::get_org_db(species_name)
-  t_table <- clusterProfiler::bitr(all_geneList %>% dplyr::pull(inkey), inkey, "SYMBOL", OrgDb = org_db )
+  t_table <- clusterProfiler::bitr(all_geneList %>% dplyr::pull(inkey), inkey, "SYMBOL", OrgDb = org_db)
 
   yarp <- dplyr::inner_join(all_geneList, t_table) %>%
     dplyr::relocate(SYMBOL) %>%
@@ -116,31 +123,40 @@ build_gene_set_detail <- function(gset_res, gset_name, inkey) {
 }
 
 
-create_msig_entries <- function(gsea_res, msig_type, ktype, limit = 30) {
+create_msig_entries <- function(gsea_res, msig_type, ktype, limit = 20) {
   stopifnot(!is.null(names(gsea_res)))
   for (set_n in names(gsea_res)) {
     cat("#### ", set_n, " {.tabset} \n")
 
+
     yote <- gsea_res[[set_n]][[msig_type]]
+    if (is.null(yote)) {
+      next
+    }
     if (is.list(yote)) {
       yote <- yote[[1]]
     }
     org_db <- RNAscripts::get_org_db(species_name)
-    yote <- setReadable(yote, org_db, keyType = ktype)
+    if (is(gsea_result$basal_pos_vs_bas_neg$msig_gsea, "gseaResult")) {
+      yote <- setReadable(yote, org_db, keyType = ktype)
+    }
 
     msig_res <- gsea_res[[set_n]][[msig_type]]
     if (is.list(msig_res)) {
       msig_res <- msig_res[[1]]
     }
     all_plots <- create_all_gsea_plots(msig_res,
-      type = msig_type,
+      plot_type = msig_type,
       contrast_n = set_n,
-      limit = limit, save_plots = F
+      limit = limit, save_plots = save_plots
     )
-    if (nrow(msig_res@result) < limit) {
-      names(all_plots) <- msig_res@result$ID
-    } else {
-      names(all_plots) <- msig_res@result$ID[1:limit]
+
+    if (!is.null(msig_res)) {
+      if (nrow(msig_res@result) < limit) {
+        names(all_plots) <- msig_res@result$ID
+      } else {
+        names(all_plots) <- msig_res@result$ID[1:limit]
+      }
     }
     print(knitr::kable(yote@result[, -c(1, length(yote@result))] %>% arrange(desc(NES))))
 
@@ -149,6 +165,7 @@ create_msig_entries <- function(gsea_res, msig_type, ktype, limit = 30) {
       cat("##### ", sig_gset, " \n")
 
       print(all_plots[[sig_gset]])
+      
       cat("\n")
       gene_enrich_table <- build_gene_set_detail(msig_res,
         gset_name = sig_gset,
@@ -162,36 +179,27 @@ create_msig_entries <- function(gsea_res, msig_type, ktype, limit = 30) {
     cat("\n \n")
   }
   cat("\n")
+
 }
 
-create_msig_entries(gsea_result, msig_type = "msig_gsea", ktype = gene_name_type, limit = 30)
 ```
 
+Here Results are put out
 
-### GSEA C3 {.tabset}
+```{r, results='asis'}
+for (gsea_name in names(gsea_conf)) {
+  if (gsea_conf[[gsea_name]]$use_gsea) {
+      cat("\n")
+      cat("### ", gsea_name , " {.tabset} \n")
+      cat("\n")
 
-C3 results 
+      create_msig_entries(gsea_result, msig_type = gsea_name,
+                          ktype = gsea_conf[[gsea_name]][["id_class"]],
+                          limit = limit)
+      cat("\n")
+      cat("\n")
+      gc()
+  }
+}
 
-```{r gseac3, results='asis', fig.width=12, fig.height=12, echo = FALSE}
-create_msig_entries(gsea_result, msig_type = "msig_C3", ktype = gene_name_type)
 ```
-
-
-### GSEA C6 {.tabset}
-
-
-C6 results 
-
-```{r gseac6, results='asis', fig.width=12, fig.height=12, echo = FALSE}
-create_msig_entries(gsea_result, msig_type = "msig_C6", ktype = gene_name_type)
-```
-
-
-### GSEA Kegg {.tabset}
-
-Kegg
-
-```{r kegg, results='asis', fig.width=12, fig.height=12, echo = FALSE}
-create_msig_entries(gsea_result, msig_type = "kegg", ktype = "ENTREZID")
-```
-

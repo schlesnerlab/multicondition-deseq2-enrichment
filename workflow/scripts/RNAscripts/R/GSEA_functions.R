@@ -1,4 +1,3 @@
-
 #' Get entrezgenenames from ensembl
 #'
 #' @param gene_names vecotr of gene symbols to be converted
@@ -38,7 +37,7 @@ get_entrezgene_vector <- function(gene_tb, input_type = "SYMBOL", org_db) {
   eg <- get_entrezgenes_from_ensembl(gene_tb[, 1], input_type, org_db = org_db)
   rownames(gene_tb) <- gene_tb[, 1]
   gene_tb <- gene_tb[eg[, 1], ]
-  gene_ranks <- stats::setNames(gene_tb[, 2], nm = eg$ENTREZID) %>% 
+  gene_ranks <- stats::setNames(gene_tb[, 2], nm = eg$ENTREZID) %>%
     sort(decreasing = TRUE)
   gene_ranks
 }
@@ -64,7 +63,6 @@ table_to_list <- function(tb, ref_col, val_col) {
 #' @param gene2id Translation table from \link{table_to_list}
 #' @export
 transform_glist <- function(gene_set, gene2id) {
-
   index <- gene_set %>% dplyr::pull(2)
   self_hatred <- gene2id[as.character(index)]
   length_info <- sapply(self_hatred, length)
@@ -109,14 +107,15 @@ over_rep_test <- function(DE_genes, T2G, universe, input_type = "ENSEMBL", ...) 
 gsea_test <- function(DE_genes, T2G, input_type = "gene_symbol", ...) {
   DE_genes <- as.data.frame(DE_genes)
   if (input_type == "ENSEMBL") {
-    DE_genes[, 1] <- stringr::str_extract(string = DE_genes %>% 
-                                            dplyr::pull(1), "^ENS[A-Z0-9]*")
+    DE_genes[, 1] <- stringr::str_extract(string = DE_genes %>%
+      dplyr::pull(1), "^ENS[A-Z0-9]*")
   }
-  glist <- stats::setNames(DE_genes[, 2], nm = DE_genes[, 1]) %>% 
+  glist <- stats::setNames(DE_genes[, 2], nm = DE_genes[, 1]) %>%
     sort(decreasing = TRUE)
   enrichment_result <- clusterProfiler::GSEA(
     geneList = glist,
     TERM2GENE = as.data.frame(T2G),
+    eps = 0,
     ...
   )
   enrichment_result
@@ -172,6 +171,54 @@ run_msig_enricher <- function(gset_list, category = NULL, species = "Mus musculu
   }
   return(enrich_res)
 }
+
+#' Function to run all gsea queries based on config file
+#'
+#' @param gsea_genes tibble with gene ids in first column and gsea statistic in second
+#' @param de_genes tibble with DE genes in first column
+#' @param gset_name Name of gene set in config to analyze
+#' @param gset_config gset config object
+#' @param species species name
+#' @param org_db org.mm.eg.db
+#' 
+#' @return List with results enrichment analysis \link[DOSE]{enrichResult-class}
+#' @export
+#' 
+run_gsea_query <- function(gsea_genes, de_genes, gset_name, 
+                          gset_config, species, org_db) {
+  run_settings <- gset_config[[gset_name]]
+  if (run_settings$use_gsea) {
+    gene_list <- gsea_genes
+  } else {
+    gene_list <- de_genes
+  }
+  if (tolower(run_settings$database) == "msigdb") {
+    enrich_obj <- RNAscripts::run_msig_enricher(gset_list = list(gene_list),
+                                GSEA = run_settings$use_gsea,
+                                category = run_settings$category,
+                                subcategory = run_settings$subcategory,
+                                species = species,
+                                msdb_var = "ensembl_gene", 
+                                input_type = "ENSEMBL"
+                                )[[1]]
+  } else if (tolower(run_settings$database) == "kegg") {
+    enrich_obj <- RNAscripts::run_gsea(gene_list,
+                          input_type = "ENSEMBL", 
+                          p_valcut = 0.05, 
+                          species = species)
+  } else if (tolower(run_settings$database) == "reactome") {
+    g_vec <- RNAscripts::get_entrezgene_vector(gene_list, "ENSEMBL", 
+                                               org_db = org_db)
+    enrich_obj <- ReactomePA::gsePathway(g_vec,
+                                                 tolower(RNAscripts::get_organism_omnipath_name(organism)),
+                                                 )
+  } else {
+    stop(glue::glue("{database} not supported, pleasue use MSigDB, kegg or Reactome"))
+  }
+  gc()
+  enrich_obj
+}
+
 #' Run KEGG gene set enrichment on DE_tb table of genes
 #'
 #' @param DE_tb Data.frame like object of col 1 gene symbols, col2 LFC values
@@ -358,9 +405,10 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
 }
 #' Title
 #'
-#' @param d_plot
-#' @param p_group
-#' @param p_path
+#' @param d_plot dotplot object
+#' @param p_group plot_group
+#' @param p_path plot_path
+#' @param gsea_type Type of gsea 
 #'
 #' @return
 #' @export

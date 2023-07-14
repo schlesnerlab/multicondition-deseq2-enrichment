@@ -11,12 +11,18 @@ on:
 jobs:
   formatting:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+
     steps:
-    - name: Checkout submodules
-      uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - name: Formatting
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with: 
+        fetch-depth: 0 
+
+    - name: Run R and snakefmt Code 
       uses: github/super-linter@v4
       env:
         VALIDATE_ALL_CODEBASE: false
@@ -49,7 +55,7 @@ jobs:
       with:
         submodules: recursive
     - name: Test workflow
-      uses: snakemake/snakemake-github-action@v1.24.0
+      uses: snakemake/snakemake-github-action@v1
       with:
         directory: './'
         snakefile: workflow/Snakefile
@@ -58,7 +64,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     - name: Test report
-      uses: snakemake/snakemake-github-action@v1.24.0
+      uses: snakemake/snakemake-github-action@v1
       with:
         directory: './'
         snakefile: workflow/Snakefile

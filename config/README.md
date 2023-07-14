@@ -26,6 +26,7 @@ Here
 - pca:
 	- labels: columns of sample sheet used for PCA plots (Used in snakemake report)
 - diffexp: conditions for PCA
+	- gsea_use_stat: bool, If true Walds test statistic used for gsea. Else we use log2FC * -log10(p- value)
 	- pval_threshold: padj threshold for DESeq2 test
 	- LFC_threshold: absolute log2 fold change threshold 
 	- contrasts: object containing the contrasts
@@ -49,7 +50,7 @@ Here
 	- joint_rep: bool Generate joint HTML report for one contrast across all comparisons
 
 - cplex_solver: Path to the cplex solver executable. 
-
+- DKFZ: bool. Optional parameter that can be enabled when running on data from DKFZ infrastructure. 
 ## Sample sheet
 
 THe sample sheet is required so that the workflow knows which condition is associated to each sample. 

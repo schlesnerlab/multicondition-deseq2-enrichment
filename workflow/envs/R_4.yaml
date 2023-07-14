@@ -47,3 +47,4 @@ dependencies:
   - bioconductor-do.db
   - bioconductor-apeglm
   - r-ggupset
+  - r-furrr

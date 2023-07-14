@@ -83,12 +83,20 @@ if (length(excluded_genes) > 0) {
     dds <- dds[-ex_index, ]
   }
 }
-# remove uninformative columns
+# remove uninformative rows
 dds <- dds[rowSums(counts(dds)) > ncol(dds) / 2, ]
 
 # normalization and preprocessing
 dds <- DESeq(dds,
   parallel = parallel
 )
-
+cpm_filter <- apply(edgeR::cpm(counts(dds, normalized = T)), 1, function(x) {
+  if(length(which(x > 0.5)) > 0.2 * length(x)) {
+    val <- 1
+  } else {
+    val <- 0 
+  }
+  as.logical(val)
+})
+dds <- dds[cpm_filter,]
 saveRDS(dds, file = snakemake@output[[1]])

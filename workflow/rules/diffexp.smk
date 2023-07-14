@@ -58,6 +58,7 @@ rule deseq2:
         "../envs/deseq2.yaml"
     resources:
         mem_mb=8192,
+        time_min=29,
     log:
         "logs/deseq2/{condition}/{contrast}.diffexp.log",
     threads: get_deseq2_threads()
@@ -125,11 +126,12 @@ rule run_gsea:
         ),
     params:
         contrast=get_contrast,
+        gsea_use_stat=config["diffexp"]["gsea_use_stat"],
     conda:
         "../envs/R_4.yaml"
     log:
         "logs/run_gsea/{condition}_{contrast}.log",
-    threads: 1
+    threads: 4
     resources:
         time_min=59 * 4,
         mem_mb=8192 * 7,
@@ -151,8 +153,8 @@ rule gsea_report:
         "logs/gsea_report/{condition}.log",
     threads: 1
     resources:
-        time_min=59 * 10,
-        mem_mb=8192 * 2,
+        time_min=59 * 20,
+        mem_mb=8192 * 6,
     script:
         "../scripts/RMD_scripts/gsea_report.Rmd"
 

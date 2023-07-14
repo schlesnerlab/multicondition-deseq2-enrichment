@@ -15,7 +15,6 @@ fig_height: 9
 </style>
 
 ```{r setup, include=FALSE}
-
 knitr::opts_chunk$set(
   echo = FALSE, warning = FALSE, message = FALSE,
   dev = "png",
@@ -43,7 +42,7 @@ if (exists("snakemake")) {
   dds_path <- snakemake@input[["dds_obj"]]
   rld_path <- snakemake@input[["rld"]]
   write(paste0(
-    class(diffexp_tables_paths), length(diffexp_tables_paths), 
+    class(diffexp_tables_paths), length(diffexp_tables_paths),
     " and ",
     class(contrast_list), " ", length(contrast_list)
   ), file = stderr())
@@ -79,17 +78,18 @@ if (exists("snakemake")) {
 
 ```{r Read data}
 ## READ all DIFFexp tables
-diff_exp_tables <- purrr::map(diffexp_tables_paths, 
-                              readr::read_tsv, 
-                              col_names = c(
-  "gene_id",
-  "baseMean",
-  "logFoldChange",
-  "lfcSE", 
-  "stat",
-  "pvalue", 
-  "padj"
-), skip = 1)
+diff_exp_tables <- purrr::map(diffexp_tables_paths,
+  readr::read_tsv,
+  col_names = c(
+    "gene_id",
+    "baseMean",
+    "logFoldChange",
+    "lfcSE",
+    "stat",
+    "pvalue",
+    "padj"
+  ), skip = 1
+)
 names(diff_exp_tables) <- contrast_list
 all_ensembl <- diff_exp_tables[[1]][, 1]
 ### Set Rownames for data frame
@@ -106,7 +106,6 @@ all_genes <- fpkm %>%
   dplyr::select(gname)
 
 Big_tables <- purrr::map(diff_exp_tables, join_tables, fpkm = fpkm)
-
 ```
 This document investigates all differentially expressed genes from across contrast groups.
 The goal here is to analyze if genes are recurring in across contrast groups, which groups
@@ -131,8 +130,10 @@ build_comb_gene_set <- function(comb_mat, comb_mat_order) {
 
 
 
-    combination_gene_sets[[merged_group_name]] <- tibble::tibble(gene_names = gnames, 
-                                                                 lfc = rep(0, length(gnames)))
+    combination_gene_sets[[merged_group_name]] <- tibble::tibble(
+      gene_names = gnames,
+      lfc = rep(0, length(gnames))
+    )
   }
   if (length(combination_gene_sets) > 30) {
     combination_gene_sets <- combination_gene_sets[c(match(names(comb_mat_order), ComplexHeatmap::comb_name(comb_mat))[1:30])]
@@ -150,43 +151,41 @@ gene_names <- purrr::map(Big_tables, function(x) {
 sig_gene_map <- purrr::map(Big_tables, function(x) {
   x %>%
     dplyr::filter(padj < pvalue_threshold &
-                  abs(logFoldChange) > lfc_threshold) %>%
+      abs(logFoldChange) > lfc_threshold) %>%
     dplyr::select(gene, gname)
 })
 
 sig_gene_names <- purrr::map(sig_gene_map, function(x) {
   dplyr::pull(x, gname)
 })
-if (any(purrr::map(sig_gene_map,nrow) > 0)) {
+if (any(purrr::map(sig_gene_map, nrow) > 0)) {
   gene_name_set <- ComplexHeatmap::list_to_matrix(sig_gene_names)
   comb_mat <- ComplexHeatmap::make_comb_mat(gene_name_set)
   comb_mat_order <- ComplexHeatmap::comb_size(comb_mat) %>% sort(decreasing = T)
   combination_gene_sets <- build_comb_gene_set(comb_mat = comb_mat, comb_mat_order = comb_mat_order)
   H_res <- run_msig_enricher(combination_gene_sets, "H", GSEA = F)
-H_res <- H_res[!(purrr::map_lgl(H_res, is.null))]
-
+  H_res <- H_res[!(purrr::map_lgl(H_res, is.null))]
 }
 if (length(sig_gene_names) > 1) {
-  test<- UpSetR::upset(UpSetR::fromList(sig_gene_names), 
-                       nsets = length(sig_gene_names), 
-                       nintersects = 30, 
-                       order.by = c("degree", "freq"), 
-                       decreasing = c(T, T)) 
+  test <- UpSetR::upset(UpSetR::fromList(sig_gene_names),
+    nsets = length(sig_gene_names),
+    nintersects = 30,
+    order.by = c("degree", "freq"),
+    decreasing = c(T, T)
+  )
 } else {
   test <- NULL
 }
-#if (!run_pert) {
+# if (!run_pert) {
 #  small_comb <- comb_mat[comb_size(comb_mat) >= 20]
-#  UpSet(small_comb, comb_order = order(comb_size(small_comb), 
+#  UpSet(small_comb, comb_order = order(comb_size(small_comb),
 #                                       decreasing = T), )
-#}
+# }
 
 test
 ```
 
 ```{r, echo = FALSE}
-
-
 #' Create dynamic table from significant gene names
 #'
 #' @param sig_gene_names import list of genes to put in matrix
@@ -218,10 +217,13 @@ create_overlap_matrix <- function(sig_gene_names) {
   DT::datatable(ordered_matrix)
 }
 
-ifelse(all(purrr::map(sig_gene_names,
-                      is.null)),
-                      create_overlap_matrix(sig_gene_names),
-                      print("No enrichments present"))
+ifelse(all(purrr::map(
+  sig_gene_names,
+  is.null
+)),
+create_overlap_matrix(sig_gene_names),
+print("No enrichments present")
+)
 ```
 
 ## Gene set enrichment {.tabset}
@@ -233,7 +235,6 @@ Each tab group shows the contrast analyed, in case no plot is shown, then no enr
 
 
 ```{r}
-
 plot_gene_sets <- function(gset_res, plot_title) {
   print(plot_title)
   if (!is.null(gset_res)) {
@@ -251,7 +252,6 @@ if (exists("H_res")) {
 ```
 
 ```{r plot Enrichments, results="asis", eval = exists("H_res")}
-
 H_barplots <- purrr::map(H_res, barplot)
 H_heatmaps <- purrr::map(H_res, clusterProfiler::heatplot, showCategory = 10)
 
@@ -261,13 +261,15 @@ for (set_n in names(H_res)) {
     cat("### ", set_n, "H set \n")
     y <- H_barplots[[set_n]]
     ifelse(nrow(y$data) > 0, plot(y), "")
-    ifelse(nrow(H_res[[set_n]]) > 0, 
-           plot(dotplot(H_res[[set_n]], orderBy = "x")), 
-           "")
+    ifelse(nrow(H_res[[set_n]]) > 0,
+      plot(dotplot(H_res[[set_n]], orderBy = "x")),
+      ""
+    )
     cat("\n")
     cat("\n")
-    ifelse(nrow(cnet_plots[[set_n]]$data) > 5, 
-           plot(cnet_plots[[set_n]]), "")    
+    ifelse(nrow(cnet_plots[[set_n]]$data) > 5,
+      plot(cnet_plots[[set_n]]), ""
+    )
     cat("\n \n")
   }
 }
@@ -283,7 +285,6 @@ The following heatmap shows the expression levels of all differntially expressed
 The gene expression is shown as normalized deseq2 rlog expression values. 
 
 ```{r, fig.width = 12, fig.heigh = 12}
-
 dds_obj <- readRDS(dds_path)
 
 rld <- readRDS(rld_path)
@@ -302,14 +303,14 @@ colnames(df) <- cond_id
 
 annotation_cols <- list(cond_id = group_colors)
 
-ha <- ComplexHeatmap::HeatmapAnnotation(condition = rld@colData[,cond_id], col = annotation_cols)
+ha <- ComplexHeatmap::HeatmapAnnotation(condition = rld@colData[, cond_id], col = annotation_cols)
 normalized_expression <- SummarizedExperiment::assay(rld[sig_transcripts, ]) - rowMeans(SummarizedExperiment::assay(rld[sig_transcripts, ]))
 ComplexHeatmap::Heatmap(normalized_expression,
   cluster_rows = TRUE, show_row_names = FALSE,
   # col = viridis::viridis(100),
   top_annotation = ha,
   name = "Normalized gene expression in differentially expressed genes",
-#  km = 4
+  #  km = 4
 )
 ```
 
@@ -343,7 +344,6 @@ A PCA is made to better characterize the data. The first scree plot shows the am
 component. The barplots show the variation explained per pc, the red line shows the cumlative variance explained. 
 
 ```{r fig.height = 8, fig.idth = 8}
-
 assay_data <- SummarizedExperiment::assay(rld)
 metadata <- SummarizedExperiment::colData(rld)
 

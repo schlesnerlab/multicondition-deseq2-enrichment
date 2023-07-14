@@ -38,3 +38,8 @@ scripts/RNAscripts.Rcheck
 *.png
 reports
 res_rep
+.condarc
+.cache
+.Rhistory
+data
+*.Rcheck

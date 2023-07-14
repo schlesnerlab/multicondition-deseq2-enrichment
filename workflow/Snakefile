@@ -22,6 +22,8 @@ validate(samples, schema="schemas/samples.schema.yaml")
 if config["DKFZ"]:
     units = pd.read_table(config["units"]).set_index("sample", drop=False)
     SEQ_TYPE = config["SEQ_TYPE"]
+    if "sample_unit" not in units.columns:
+        units.sample_unit = units.sample
 else:
     units = samples
 
@@ -116,6 +118,9 @@ rule all:
 # this container defines the underlying OS for each job when using the workflow
 # with --use-conda --use-singularity
 container: "docker://continuumio/miniconda3"
+
+
+containerized: "docker://chheyer/multiconditiondeseq2enrichment:1.1.0"
 
 
 ##### setup report #####

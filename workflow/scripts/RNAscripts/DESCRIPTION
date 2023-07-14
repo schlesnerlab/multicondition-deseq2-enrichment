@@ -27,6 +27,8 @@ Imports:
   tidyselect,
   svglite,
   DT,
+  glue,
+  ReactomePA
 Suggests:
   ComplexHeatmap,
   rlang,
@@ -36,4 +38,4 @@ Suggests:
   reactome.db,
   AnnotationDbi,
   testthat
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3

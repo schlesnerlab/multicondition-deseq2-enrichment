@@ -26,7 +26,6 @@ knitr::opts_chunk$set(
   fig.width = 12, fig.height = 12
 )
 
-
 library(tidyverse)
 library(clusterProfiler)
 
@@ -75,7 +74,7 @@ if (exists("snakemake")) {
   organism <- snakemake@config[["organism"]]
   conf <- snakemake@config
 } else {
-  conf <- yaml::read_yaml("./../../config/STAD.yaml")
+  conf <- yaml::read_yaml("configs/VascAge_config.yaml")
   base_analysis_dir <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
 
   cond_id <- names(conf$diffexp$contrasts)[1]
@@ -107,7 +106,7 @@ if (exists("snakemake")) {
 
   group_colors <- conf[["group_colors"]][[cond_id]] %>% unlist()
   organism <- conf$organism
-  lfc_shrink <- TRUE
+  lfc_shrink <- FALSE
   model_string <- "~ condition"
 }
 
@@ -174,7 +173,6 @@ DESeq2::plotMA(res)
 
 
 ```{r load DEseq data, echo=FALSE}
-
 sample_overview <- readr::read_tsv(samp_map)
 
 deseq_tb <- readr::read_tsv(diffexp_tb_path,
@@ -219,7 +217,7 @@ Here you can identify clustered of differntially expressed genes to a certain de
 
 The Heatmap shows the rlog transformed Count values from deseq seq which are centered to the Mean for each row. 
 
-```{r, fig.width = 14,fig.height =12} 
+```{r plot Heatmaps, fig.width = 14,fig.height =12} 
 diff_exp_trans <- SummarizedExperiment::assay(rld)[joined_df$gene, ]
 rownames(diff_exp_trans) <- joined_df$gname
 write(cond_id, file = stderr())
@@ -244,11 +242,12 @@ small_joined_df <- na.omit(small_joined_df)
 
 if (nrow(small_joined_df) > 1) {
   scaled_diffexp <- diff_exp_genes
-  diffexp_heatmap <- Heatmap(head(scaled_diffexp[order(
-    abs(small_joined_df$logFoldChange * -log10(small_joined_df$padj)),
-    decreasing = TRUE
-  ), ], 50),
-  top_annotation = col_annotation
+  diffexp_heatmap <- Heatmap(
+    head(scaled_diffexp[order(
+      abs(small_joined_df$logFoldChange * -log10(small_joined_df$padj)),
+      decreasing = TRUE
+    ), ], 50),
+    top_annotation = col_annotation
   )
   save_cheatmap_svg(
     x = diffexp_heatmap,
@@ -265,7 +264,7 @@ if (nrow(small_joined_df) > 1) {
 
 The following plot shows the top differential expressed genes in both LogFold change and p-value.
 
-```{r}
+```{r plot Vo}
 library(EnhancedVolcano)
 
 volcano_plot <- EnhancedVolcano(as.data.frame(joined_df),
@@ -295,7 +294,6 @@ The Red and blue heatmaps show the gene expression normalized by the mean expres
 
 
 ```{r centered heatmap, fig.width = 14,fig.height =12}
-
 #' Uniquify a vector
 #'
 #' @param x Input factor to check
@@ -409,7 +407,13 @@ We also use an over representation test on the MsigDB pathway database as a comp
 
 
 ```{r go enrichment}
+genereate_gsea_plots <- function(gsea_obj, gsea_name) {
+  cat("\n")
+  cat("### ", gsea_name , " \n")
+  cat("\n")
 
+
+}
 msig_enrichment <- enrich_list$msig_enrichment
 
 msig_gsea <- enrich_list$msig_gsea
@@ -446,39 +450,18 @@ Note:
 - GeneRatio denotes the % of genes found in the designated gene set. (for over rep test
 - for GSEA: GeneRatio denotes $\frac{Core\ enriched\ genes}{Set\ Size} *100$
 
-### Msigdb gsea
 
-```{r msigdb, fig.width = 10,fig.height =10}
-org_db <- get_org_db(organism)
-
-do_gseaplots <- function(enrich_res, gene_stats = NULL, id_class = "ENTREZID") {
-  if (nrow(enrich_res) > 1) {
-    z <- enrichplot::upsetplot(enrich_res)
-
-    return(list("upset" = z))
-  }
-}
-plot_pathways <- function(fgsea_res, pathways_list, gene_ranks) {
-  top_pathways_up <- fgsea_res[ES > 0][head(order(pval), n = 10), pathway]
-  top_pathways_down <- fgsea_res[ES < 0][head(order(pval), n = 10), pathway]
-  top_pathways <- c(top_pathways_up, rev(top_pathways_down))
-  p <- fgsea::plotGseaTable(
-    pathways = pathways_list[top_pathways], stats = gene_ranks,
-    fgseaRes = fgsea_res,
-    gseaParam = 0.2, render = FALSE
-  )
-  p
-}
-
+```{r msigdb, fig.width = 10,fig.height =10, results='asis'}
 better_dotplot <- function(gset, c_groups = contrast_groups) {
-  pos_gsea <- gset %>% dplyr::filter(NES > 0.5)
+  pos_gsea <- gset %>% dplyr::filter(NES > 0.5) %>% dplyr::arrange(desc(NES))
+
   if (nrow(pos_gsea) > 1) {
     dp_pos_nes <-
       dotplot(
         pos_gsea,
         size = "NES",
         color = "p.adjust",
-        showCategory = 50,
+        showCategory = 20,
         title = glue::glue("Pathways enriched in {contrast_groups[1]}")
       ) +
       scale_size(range = c(1, 7), limits = c(1, max(gset@result$NES)))
@@ -486,14 +469,15 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
     dp_pos_nes <- NULL
   }
 
-  neg_gsea <- gset %>% dplyr::filter(NES < -0.5)
+  neg_gsea <- gset %>% dplyr::filter(NES < -0.5) %>% dplyr::arrange(NES)
+
   if (nrow(neg_gsea) > 1) {
     dp_neg_nes <-
       dotplot(
         neg_gsea,
         size = "NES",
         color = "p.adjust",
-        showCategory = 50,
+        showCategory = 20,
         title = glue::glue("Pathways enriched in {contrast_groups[2]}")
       ) +
       scale_size(range = c(7, 1), limits = c(min(gset@result$NES), -1))
@@ -503,7 +487,6 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
 
   return(list(dp_pos_nes, dp_neg_nes))
 }
-
 #' Title
 #'
 #' @param d_plot
@@ -515,222 +498,85 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
 #'
 #' @examples
 save_dotplots <- function(d_plot, p_group, p_path = plot_path, gsea_type) {
-  ggplot2::ggsave(filename = file.path(p_path,
-                              glue::glue("{p_group}_{gsea_type}_dplot.svg")),
-         d_plot, width = 10, height = 10)
-}
-cat("### ", "msigdb gsea", " \n")
-
-x <- do_gseaplots(msig_gsea, setNames(
-  object = joined_df$logFoldChange,
-  nm = str_extract(joined_df$gene,
-    pattern = "ENS[A-Z0-9]*"
-  )
-), id_class = "ENSEMBL")
-
-x
-msig_set <- clusterProfiler::setReadable(msig_gsea, org_db, "ENSEMBL")
-if (nrow(msig_gsea) > 1) {
-  enriched_plot <- plot_enrichment(msig_gsea@result,
-    X = "ID", Y = "NES",
-    pval = "p.adjust"
-  )
-  ggsave(filename = file.path(plot_path, paste0(
-    contrast_groups[1], "_vs_",
-    contrast_groups[2],
-    "_msig_gsea_enrichplot.svg"
-  )))
-  plot(enriched_plot)
-  f_changes <- ensembl_gene_list
-  f_changes$gene <- f_changes$gene %>% stringr::str_extract(., "^ENS[A-Z0-9]*")
-
-  dplot <- better_dotplot(msig_gsea, c_groups = contrast_groups)
-  purrr::map2(dplot, contrast_groups, save_dotplots, gsea_type = "msigdb")
-  dplot
-} else {
-  print("no msig gsea enrichments")
-}
-```
-
-```{r, fig.width = 16, fig.height=16}
-if (nrow(msig_set) > 1) {
-  cnetplot <- cnetplot(
-    msig_set,
-    foldChange = set_names(joined_df$logFoldChange, gene_list$gname),
-    node_label = "all",
-    layout = "nicely",
-    cex_label_category = 0.8,
-    cex_label_gene = 0.6
-  )
-  ggsave(
-    filename = file.path(plot_path, paste0(
-      contrast_groups[1],
-      "_vs_", contrast_groups[2],
-      "_msig_gsea_cnet.svg"
-    )),
-    cnetplot, width = 16, height = 16
-  )
-  cnetplot
-}
-```
-
-### Msigdb over rep test 
-
-```{r}
-cat("\n")
-cat("### ", "MSigDB ORA", " \n")
-cat("\n Plot")
-
-if (!is.null(msig_enrichment)) {
-  do_gseaplots(msig_enrichment,
-    setNames(
-      object = as.data.frame(DEgenes)[, 3],
-      nm = as.data.frame(DEgenes)[, 1]
-    ),
-    id_class = "ENSEMBL"
-  ) %>% purrr::map(plot)
-
-  if (nrow(msig_enrichment) > 1) {
-    msig_enrichment <- clusterProfiler::setReadable(
-      msig_enrichment,
-      org_db, "ENSEMBL"
-    )
-    dotplot(msig_enrichment)
-  } else {
-    print("no msig enrichments")
-  }
-}
-```
-
-```{r fig.width = 16, fig.height = 16}
-
-if (!is.null(msig_enrichment)) {
-  if (nrow(msig_enrichment) > 1) {
-    cnetplot(
-      msig_enrichment,
-      foldChange = setNames(object = joined_df$logFoldChange,
-                            nm = as.data.frame(gene_list)[, 1]),
-      node_label = "all",
-      layout = "nicely",
-      cex_label_category = 0.8,
-      cex_label_gene = 0.6
-    ) %>% plot()
-  }
-}
-```
-
-
-
-### KEGG plots
-
-The following plots were generated against the KEGG pathway database in mice. 
-
-```{r KEGG plots, fig.width = 10,fig.height =10}
-library(dplyr)
-dupfree_gene_list <- gene_list[!duplicated(gene_list$gname), ]
-
-if (nrow(kegg@result) > 1) {
-  kegg <- clusterProfiler::setReadable(kegg, org_db, "ENTREZID")
-
-  p <- plot_enrichment(kegg@result,
-    X = "Description", Y = "NES",
-    pval = "p.adjust", pval_threshold = 0.1
-  ) +
-    ggtitle(glue::glue("KEGG {contrast_groups[1]}_vs_{contrast_groups[2]}"))
-  ggsave(
+  ggplot2::ggsave(
     filename = file.path(
-      plot_path,
-      glue::glue("{contrast_groups[1]}_vs_{contrast_groups[2]}_KEGG_enrichment.svg")
+      p_path,
+      glue::glue("{p_group}_{gsea_type}_dplot.svg")
     ),
-    p
+    d_plot, width = 10, height = 10
   )
-  plot(p)
-
-
-  keg_dplot <- better_dotplot(kegg, c_groups = contrast_groups)
-  purrr::map2(keg_dplot, contrast_groups, save_dotplots, gsea_type = "KEGG")
-} else {
-  print("no kegg gsea enrichments")
 }
-```
 
-```{r fig.height=16, fig.width=16}
-if (nrow(kegg) > 1) {
-  cnet_kegg <- cnetplot(
-    kegg,
-    foldChange = setNames(
-      object = joined_df$logFoldChange,
-      nm = as.data.frame(gene_list)[, 1]
-    ),
-    node_label = "all",
+org_db <- get_org_db(organism)
 
-    cex_label_category = 0.8,
-    cex_label_gene = 0.6
-  )
-  ggsave(
-    filename = file.path(plot_path, paste0(
-      contrast_groups[1],
-      "_vs_", contrast_groups[2],
-      "_kegg_gsea_cnet.svg"
-    )),
-    cnet_kegg, width = 16, height = 16
-  )
-  cnet_kegg
+do_gseaplots <- function(enrich_res, gsea_name) {
+  cat("\n")
+  cat("### ", gsea_name , " \n")
+  cat("\n")
+
+  id_class <- conf[["gsea"]][[gsea_name]][["id_class"]]
+  all_plots <- list()
+  if (!is.null(enrich_res)) {
+    if (nrow(enrich_res) > 1) {
+      enrich_res <- clusterProfiler::setReadable(enrich_res, org_db, id_class)
+      z <- enrichplot::upsetplot(enrich_res)
+      all_plots$upset <- z
+      if (conf[["gsea"]][[gsea_name]][["use_gsea"]]) {
+        enrich_plots <- RNAscripts::plot_enrichment(enrich_res, 
+          X = "ID", Y = "NES",
+          pval = "p.adjust"
+        )
+        ggsave(filename = file.path(plot_path, paste0(
+          contrast_groups[1], "_vs_",
+          contrast_groups[2],
+          "_", gsea_name, "_enrichplot.svg"
+        )), plot = enrich_plots)
+        print(enrich_plots)
+        all_plots$enrichplots <- enrich_plots
+
+        dplot <- better_dotplot(enrich_res, c_groups = contrast_groups)
+        x<- purrr::map(dplot, print)
+        purrr::map2(dplot, contrast_groups, save_dotplots, gsea_type = gsea_name )
+        all_plots$dotplots <- dplot      
+        cnetplot <- cnetplot(enrich_res,
+                                foldChange = set_names(joined_df$logFoldChange, gene_list$gname),
+                                node_label = "all",
+                                layout = "nicely",
+                                cex_label_category = 0.8,
+                                cex_label_gene = 0.6
+                                )
+        print(cnetplot)
+        
+        ggsave(
+          filename = file.path(plot_path, paste0(
+            contrast_groups[1],
+            "_vs_", contrast_groups[2], "_", gsea_name,
+            "_cnet.svg"
+          )),
+          cnetplot, width = 16, height = 16
+        )
+        all_plots <- cnetplot
+      } else {
+        enrich_plots <- NULL
+        all_plots$dotplots <- dotplot(msig_enrichment) 
+        print(dotplot)
+      }
+    } else {
+      all_plots <- NULL
+    }
+  }
+  cat("\n \n")
+  return(all_plots)
 }
+
+
+all_plots <- purrr::map2(enrich_list, names(enrich_list), do_gseaplots)
+
+
 ```
+  
 
 
-### reactome plots
 
-```{r reactomeplots,  fig.width = 10,fig.height =14}
-print("reactome")
 
-if (nrow(reactome_stuff@result) > 1) {
-  reactome_stuff <- clusterProfiler::setReadable(reactome_stuff, org_db, "ENTREZID")
-  e_plot <- plot_enrichment(reactome_stuff@result,
-    X = "Description",
-    Y = "NES",
-    pval = "p.adjust", pval_threshold = 0.05
-  )
-  ggsave(
-    filename = file.path(
-      plot_path,
-      glue::glue("{contrast_groups[1]}_vs_{contrast_groups[2]}_reactome_enrichlpot.svg")
-    ),
-    e_plot
-  )
-  e_plot
-
-  reac_dplot <- better_dotplot(reactome_stuff, c_groups = contrast_groups)
-  purrr::map(reac_dplot, contrast_groups, save_dotplots, gsea_type = "reactome")
-  reac_dplot
-} else {
-  print("no reactome gsea enrichments")
-}
-```
-
-```{r fig.width = 16, fig.height = 16}
-if (nrow(reactome_stuff) > 1) {
-  reactome_cnet <- clusterProfiler::cnetplot(
-    reactome_stuff,
-    foldChange = setNames(
-      object = joined_df$logFoldChange,
-      nm = as.data.frame(gene_list)[, 1]
-    ),
-    node_label = "all",
-    cex_label_category = 0.8,
-    cex_label_gene = 0.6
-  )
-  ggsave(
-    filename = file.path(plot_path, paste0(
-      contrast_groups[1],
-      "_vs_",
-      contrast_groups[2],
-      "_reactome_gsea_cnet.svg"
-    )),
-    reactome_cnet, width = 16, height = 16
-  )
-  reactome_cnet
-}
-```
 
