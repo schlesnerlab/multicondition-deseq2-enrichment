@@ -109,7 +109,8 @@ gsea_test <- function(DE_genes, T2G, input_type = "gene_symbol", ...) {
   if (input_type == "ENSEMBL") {
     DE_genes[, 1] <- stringr::str_extract(string = DE_genes %>%
       dplyr::pull(1), "^ENS[A-Z0-9]*")
-    T2G[, 2] <- stringr::str_extract(string = T2G[, 2], "^ENS[A-Z0-9]*")
+   
+    T2G[, 2] <- stringr::str_extract(string = T2G %>% dplyr::pull(2), "^ENS[A-Z0-9]*")
   }
   glist <- stats::setNames(DE_genes[, 2], nm = DE_genes[, 1]) %>%
     sort(decreasing = TRUE)
@@ -236,7 +237,7 @@ run_gsea_query <- function(gsea_genes, de_genes, gset_name,
     }
     # Run GSEA
 
-    enrich_obj <- RNAscripts::gsea_test(DE_genes =  gene_list,
+    enrich_obj <- gsea_test(DE_genes =  gene_list,
       T2G = senescence_genes,
       input_type = "ENSEMBL")
 

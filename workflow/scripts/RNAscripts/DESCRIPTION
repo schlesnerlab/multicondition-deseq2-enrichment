@@ -15,6 +15,7 @@ Imports:
   clusterProfiler,
   DESeq2,
   dplyr,
+  enrichplot,
   magrittr,
   msigdbr,
   org.Mm.eg.db,
