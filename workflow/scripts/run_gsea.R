@@ -20,6 +20,7 @@ if (exists("snakemake")) {
   conf <- yaml::read_yaml("./configs/VascAge_config.yaml")
   BASE_ANALYSIS_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
 
+  gsea_config <- conf$gsea
   cond_id <- names(conf$diffexp$contrasts)[1]
   comp_id <- names(conf$diffexp$contrasts[[cond_id]])[1]
 
@@ -65,16 +66,19 @@ de_genes <- joined_df %>%
   dplyr::filter(padj < pvalue_threshold & abs(gsea_stat) > LFC_threshold) %>%
   dplyr::select(c(gene, stat, gsea_stat))
 
+t_table <- RNAscripts::table_to_list(joined_df, 'gname', 'gene')
 
 # t_table <- RNAscripts::get_entrezgenes_from_ensembl(filer %>% dplyr::pull(gene), input_type = 'ENSEMBL', org_db =
 # org_db ) %>% RNAscripts::table_to_list(., 'ENTREZID', 'ENSEMBL')
 
 enrich_data <- furrr::future_map(names(gsea_config), RNAscripts::run_gsea_query,
-                              gsea_genes = ensemblgene_list,
-                              de_genes = de_genes,
-                              gset_config = gsea_config,
-                              species = organism,
-                              org_db = org_db)
+  gsea_genes = ensemblgene_list,
+  de_genes = de_genes,
+  gset_config = gsea_config,
+  species = organism,
+  org_db = org_db,
+  t_table = t_table
+)
 names(enrich_data) <- names(gsea_config)
 
 saveRDS(object = enrich_data, file = out_file)
