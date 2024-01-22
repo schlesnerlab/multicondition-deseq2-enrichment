@@ -2,9 +2,10 @@ library(clusterProfiler)
 library(magrittr)
 library(furrr)
 # library(tidyverse)
+library(RNAscripts)
 
 ## Snakemake header
-
+options <- furrr_options(seed = 6827)
 if (exists("snakemake")) {
   diffexp_tb_path <- snakemake@input[["table"]]
   fpkm_path <- snakemake@input[["fpkm_path"]]
@@ -17,7 +18,7 @@ if (exists("snakemake")) {
   gsea_config <- snakemake@config[["gsea"]]
   plan(strategy = multicore, workers = snakemake@threads)
 } else {
-  conf <- yaml::read_yaml("./configs/VascAge_config.yaml")
+  conf <- yaml::read_yaml("./configs/VascAge_Apelin_config.yaml")
   BASE_ANALYSIS_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
 
   gsea_config <- conf$gsea

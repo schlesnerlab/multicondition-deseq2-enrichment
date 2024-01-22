@@ -135,6 +135,7 @@ gsea_test <- function(DE_genes, T2G, input_type = "gene_symbol", ...) {
 #' @param translation_table named list translating gene IDs from \link{table_to_list}
 #' @param msdb_var Variable to use for gsea from msgdbr table \link[msigdbr]{msigdbr}
 #' @param input_type Type of input in gset_list
+#' @param custom_geneset Custom gene set to use instead of msigdb. Format is a data.frame with two columns
 #' @param ... Parameters passed to enichment functions from clusterProfiler
 #'
 #' @return \link[DOSE]{enrichResult-class} of given information
@@ -143,15 +144,24 @@ run_msig_enricher <- function(gset_list, category = NULL, species = "Mus musculu
                               subcategory = NULL,
                               GSEA = TRUE, universe = NULL, translation_table = NULL,
                               msdb_var = "gene_symbol", input_type = "gene_symbol",
+                              custom_geneset = NULL,  # Neuer Parameter für benutzerdefiniertes Gen-Set
                               ...) {
   stopifnot(class(gset_list) == "list")
   col_names <- c("gs_name", msdb_var)
-  msg_class <- msigdbr::msigdbr(
-    species = species,
-    category = category,
-    subcategory = subcategory
-  ) %>%
-    dplyr::select(col_names)
+  
+  # Überprüfen Sie, ob ein benutzerdefiniertes Gen-Set bereitgestellt wurde
+  if (is.null(custom_geneset)) {
+    msg_class <- msigdbr::msigdbr(
+      species = species,
+      category = category,
+      subcategory = subcategory
+    ) %>%
+      dplyr::select(col_names)
+  } else {
+    # Verwenden Sie das benutzerdefinierte Gen-Set, wenn es bereitgestellt wurde
+    msg_class <- custom_geneset
+  }
+  
   if (!is.null(translation_table)) {
     msg_class <- transform_glist(msg_class, translation_table)
   }
@@ -218,9 +228,7 @@ run_gsea_query <- function(gsea_genes, de_genes, gset_name,
   } else if (tolower(run_settings$database) == "custom_senescence") {
     # TODO: Add Human Version
     if (species == "Mus musculus") {
-      data_path <- system.file("data", "senes_gs.RDS",
-      package = "RNAscripts")
-      senescence_genes <- readRDS(data_path) 
+      senescence_genes <- RNAscripts::senes
     } else {
       stop("Species not supported yet. senescence gene set only available for Mus musculus")
     }
@@ -241,11 +249,23 @@ run_gsea_query <- function(gsea_genes, de_genes, gset_name,
       T2G = senescence_genes,
       input_type = "ENSEMBL")
 
+  } else if (tolower(run_settings$database) == "mitocarta") {
+    if (species == "Mus musculus") {
+      mito_genes <- RNAscripts::MitoPathways
+    } else {
+      stop("Species not supported yet. MitoCarta gene set only available for Mus musculus")
+    }
 
-    # for
+    # Transform from tibble to dataframe for clusterProfiler
+    mito_genes <- as.data.frame(mito_genes)
+    # Since we are using ENSEMBL IDs we delete gene symbols columns
+    mito_genes <- mito_genes %>% dplyr::select(GeneSet, EnsemblGeneID)    
 
+    enrich_obj <- gsea_test(DE_genes =  gene_list,
+      T2G = mito_genes,
+      input_type = "ENSEMBL")
   } else {
-    stop(glue::glue("{database} not supported, pleasue use MSigDB, kegg or Reactome"))
+    stop(glue::glue("{run_settings$database} not supported, pleasue use MSigDB, kegg or Reactome"))
   }
   gc()
   enrich_obj

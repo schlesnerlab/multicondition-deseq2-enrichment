@@ -29,7 +29,9 @@ Imports:
   svglite,
   DT,
   glue,
-  ReactomePA
+  ReactomePA,
+  readxl,
+  tidyr
 Suggests:
   ComplexHeatmap,
   rlang,
