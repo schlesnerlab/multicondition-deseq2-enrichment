@@ -8,6 +8,7 @@ dependencies:
   - bioconductor-decoupler
   - bioconductor-chipseeker
   - bioconductor-deseq2
+  - bioconductor-omnipathr
   - bioconductor-reactomepa
   - bioconductor-genomicranges
   - bioconductor-pcatools

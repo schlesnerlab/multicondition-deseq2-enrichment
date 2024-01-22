@@ -43,7 +43,7 @@ if (exists("snakemake")) {
   color_scheme <- purrr::map(snakemake@config[["group_colors"]], unlist)
   organism <- snakemake@config[["organism"]]
 } else {
-  the_yaml <- yaml::read_yaml("../../config/STAD.yaml")
+  the_yaml <- yaml::read_yaml("../../configs/VascAge_Apelin_config.yaml")
 
   BASE_ANALYSIS_DIR <- c(the_yaml$dirs$BASE_ANALYSIS_DIR)
   #  comp_id <- "YECplusA-vs-YEC"
@@ -56,7 +56,7 @@ if (exists("snakemake")) {
   cond_id <- names(the_yaml$diffexp$contrasts)
   comp_groups <- the_yaml$comp_groups
   color_scheme <- purrr::map(the_yaml$group_colors, unlist)
-  organism <- "Homo sapiens"
+  organism <- "Mus musculus"
 }
 if (!dir.exists(plot_path)) {
   dir.create(plot_path)

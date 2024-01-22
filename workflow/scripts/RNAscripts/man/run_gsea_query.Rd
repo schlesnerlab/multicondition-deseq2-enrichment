@@ -4,7 +4,15 @@
 \alias{run_gsea_query}
 \title{Function to run all gsea queries based on config file}
 \usage{
-run_gsea_query(gsea_genes, de_genes, gset_name, gset_config, species, org_db)
+run_gsea_query(
+  gsea_genes,
+  de_genes,
+  gset_name,
+  gset_config,
+  species,
+  org_db,
+  t_table = NULL
+)
 }
 \arguments{
 \item{gsea_genes}{tibble with gene ids in first column and gsea statistic in second}
@@ -18,6 +26,8 @@ run_gsea_query(gsea_genes, de_genes, gset_name, gset_config, species, org_db)
 \item{species}{species name}
 
 \item{org_db}{org.mm.eg.db}
+
+\item{t_table}{translation_table to convert EnsemblIDs to gene symbols}
 }
 \value{
 List with results enrichment analysis \link[DOSE]{enrichResult-class}

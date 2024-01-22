@@ -14,6 +14,7 @@ run_msig_enricher(
   translation_table = NULL,
   msdb_var = "gene_symbol",
   input_type = "gene_symbol",
+  custom_geneset = NULL,
   ...
 )
 }
@@ -35,6 +36,8 @@ run_msig_enricher(
 \item{msdb_var}{Variable to use for gsea from msgdbr table \link[msigdbr]{msigdbr}}
 
 \item{input_type}{Type of input in gset_list}
+
+\item{custom_geneset}{Custom gene set to use instead of msigdb. Format is a data.frame with two columns}
 
 \item{...}{Parameters passed to enichment functions from clusterProfiler}
 }
