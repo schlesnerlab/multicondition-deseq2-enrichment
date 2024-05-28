@@ -45,7 +45,7 @@ if (exists("snakemake")) {
   color_scheme <- snakemake@config[["group_colors"]][[cond_var]]
   organism <- snakemake@config[["organism"]]
 } else {
-  the_yaml <- yaml::read_yaml("../../../configs/VascAge_config.yaml")
+  the_yaml <- yaml::read_yaml("../../../config/workflow_unit_test.yaml")
   snakedir <- "/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment"
   #BASE_ANALYSIS_DIR <- file.path(snakedir, "data/STAD")
   BASE_ANALYSIS_DIR <- the_yaml$dirs$BASE_ANALYSIS_DIR
@@ -180,12 +180,14 @@ if (!is.null(color_scheme)) {
 
 
 # Plot
+if (nrow(sample_acts_mat) > 0) {
 ComplexHeatmap::Heatmap(sample_acts_mat,
   clustering_method_rows = "average",
   clustering_method_columns = "average",
   right_annotation = ha,
   heatmap_legend_param = list(title = "score")
 )
+}
 ```
 
 ```{r}

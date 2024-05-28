@@ -38,7 +38,7 @@ if (exists("snakemake")) {
   color_scheme <- snakemake@config[["group_colors"]][[cond_id]]
   organism <- snakemake@config[["organism"]]
 } else {
-  the_yaml <- yaml::read_yaml("../../../configs/VascAge_config.yaml")
+  the_yaml <- yaml::read_yaml("../../../config/workflow_unit_test.yaml")
   #snakedir <- "/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment"
   #BASE_ANALYSIS_DIR <- file.path(snakedir, "data/STAD")
   BASE_ANALYSIS_DIR <- the_yaml$dirs$BASE_ANALYSIS_DIR
@@ -51,7 +51,7 @@ if (exists("snakemake")) {
   )
   fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
   contrast_groups <- the_yaml$diffexp$contrasts[[cond_id]][1]
-  plot_path <- "."
+  plot_path <- tempdir()
   register(SerialParam())
   s_groups <- names(the_yaml$group_colors[[cond_id]])
   # s_groups<- c("d0-lung", "d15-lung", "d22-lung", "d36-lung", "18m-lung")
