@@ -21,6 +21,7 @@ dependencies:
   - bioconductor-annotationhub
   - bioconductor-org.mm.eg.db
   - bioconductor-org.hs.eg.db
+  - bioconductor-mitch
   - r-ggplot2
   - r-tidyverse
   - r-reshape2

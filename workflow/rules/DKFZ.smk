@@ -327,9 +327,9 @@ rule multiqc:
     log:
         BASE_ANALYSIS_DIR + "logs/multiqc.log",
     params:
-        extra="--data-dir"
+        extra="--data-dir",
     resources:
-        mem_mb=8192*2,
+        mem_mb=8192 * 2,
         time_min=59 * 4,
     wrapper:
         "v3.3.3/bio/multiqc"

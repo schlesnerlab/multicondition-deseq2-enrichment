@@ -431,8 +431,9 @@ get_kegg_name <- function(org_name) {
 #' 
 #' @examples NULL
 better_dotplot <- function(gset, c_groups = contrast_groups) {
-  pos_gsea <- gset %>% dplyr::filter(NES > 0.5)
-  if (nrow(pos_gsea) > 1) {
+  pos_gsea <- gset
+  pos_gsea@result <- gset@result[gset@result$NES > 0, ]
+  if (nrow(pos_gsea) >= 1) {
     dp_pos_NES <-
       enrichplot::dotplot(
         pos_gsea,
@@ -445,9 +446,9 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
   } else {
     dp_pos_NES <- NULL
   }
-
-  neg_gsea <- gset %>% dplyr::filter(NES < -0.5)
-  if (nrow(neg_gsea) > 1) {
+  neg_gsea <- gset
+  neg_gsea@result <- gset[gset@result$NES < 0, ]
+  if (nrow(neg_gsea) >= 1) {
     dp_neg_NES <-
       enrichplot::dotplot(
         neg_gsea,

@@ -4,6 +4,7 @@ channels:
   - defaults
 dependencies:
   - bioconductor-progeny
+  - bioconductor-decoupler
   - bioconductor-omnipathr
   - bioconductor-complexheatmap
   - r-readr
@@ -64,4 +65,7 @@ dependencies:
   - r-rmarkdown
   - r-corrplot
   - r-upsetr
+  - r-biocmanager
+  - bioconductor-reactomepa
+  - r-lpsolve
     #  - r-rvcheck<0.2.0

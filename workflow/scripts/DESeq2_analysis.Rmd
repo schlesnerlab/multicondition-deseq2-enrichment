@@ -74,10 +74,10 @@ if (exists("snakemake")) {
   organism <- snakemake@config[["organism"]]
   conf <- snakemake@config
 } else {
-  conf <- yaml::read_yaml("configs/VascAge_config.yaml")
+  conf <- yaml::read_yaml("../../configs/tec_age_young.yaml")
   base_analysis_dir <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
 
-  cond_id <- names(conf$diffexp$contrasts)[1]
+  cond_id <- names(conf$diffexp$contrasts)[3]
   comp_id <- names(conf$diffexp$contrasts[[cond_id]])[1]
   contrast_groups <- conf$diffexp$contrasts[[cond_id]][[comp_id]]
   coef_string <- paste0(

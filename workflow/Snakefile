@@ -30,7 +30,6 @@ else:
 BASE_DATA_DIR = config["dirs"]["BASE_DATA_DIR"]
 BASE_ANALYSIS_DIR = config["dirs"]["BASE_ANALYSIS_DIR"]
 CONTRASTS = config["diffexp"]["contrasts"]
-
 ##### target rules #####
 
 
@@ -41,7 +40,15 @@ salmon_files = []
 
 if config["run_mitch"]:
     salmon_files.extend(
-        [join(BASE_ANALYSIS_DIR, "results/diffexp/mitch/mitch_report.html")]
+        [
+            expand(
+                join(
+                    BASE_ANALYSIS_DIR,
+                    "results/diffexp/mitch/{condition}_mitch_report.html",
+                ),
+                condition=config["run_mitch"],
+            )
+        ]
     )
 
 if config["run_carnival"]["vanilla"]:

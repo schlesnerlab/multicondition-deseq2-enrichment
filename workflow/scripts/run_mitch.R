@@ -35,12 +35,14 @@ if (exists("snakemake")) {
   threads <- snakemake@threads
   enrichment_term_type <- "SYMBOL"
 } else {
-  BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/cre_2022/"
-  contrast_list <- c(
-    "basal_cre_pos_vs_basal_cre_neg", "tumor_cre_pos_vs_tumor_cre_neg", "tumor_cre_pos_vs_basal_cre_pos",
-    "tumor_cre_neg_vs_basal_cre_neg"
-  )
-  diffexp_tables_paths <- as.list(file.path(BASE_ANALYSIS_DIR, glue::glue("results/diffexp/{contrast_list}.diffexp.tsv")))
+  configfile <- yaml::read_yaml("./configs/VascAge_Apelin_config_wo_youngplus.yaml")
+  BASE_ANALYSIS_DIR <- configfile$dirs$BASE_ANALYSIS_DIR
+  contrast_list <- names(configfile$diffexp$contrasts$condition)
+#  contrast_list <- c(
+#    "basal_cre_pos_vs_basal_cre_neg", "tumor_cre_pos_vs_tumor_cre_neg", "tumor_cre_pos_vs_basal_cre_pos",
+#    "tumor_cre_neg_vs_basal_cre_neg"
+#  )
+  diffexp_tables_paths <- as.list(file.path(BASE_ANALYSIS_DIR, glue::glue("results/diffexp/condition/{contrast_list}.diffexp.tsv")))
 
 
   fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
@@ -54,7 +56,8 @@ diff_exp_tables <- purrr::map(diffexp_tables_paths, readr::read_tsv, col_names =
   "gene_id", "baseMean", "logFoldChange",
   "lfcSE", "stat", "pvalue", "padj"
 ), skip = 1)
-names(diff_exp_tables) <- contrast_list
+print(contrast_list)
+names(diff_exp_tables) <- names(contrast_list)
 diff_exp_frames <- purrr::map(diff_exp_tables, function(x) {
   gene_ids <- x$gene_id
   diff_exp_fr <- as.data.frame(x[, -1])
