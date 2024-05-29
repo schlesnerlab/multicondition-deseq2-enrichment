@@ -114,7 +114,8 @@ prog_net <- decoupleR::get_progeny(organism = org_name, top = 500) %>% dplyr::fi
 
 
 PathwayActivity_counts <- decoupleR::run_mlm(Normalized_counts,network = prog_net, .mor = "weight", center = T) %>%
-  dplyr::mutate(padj = p.adjust(p_value, method = "BH")) %>% dplyr::filter(p_value < 0.05) %>%
+  dplyr::mutate(padj = p.adjust(p_value, method = "BH")) %>% #dplyr::filter(p_value < 0.05) %>%
+  dplyr::mutate(score = ifelse(p_value < 0.05, score, 0  )) %>%
    pivot_wider( 
     id_cols = "condition", names_from = "source",
     values_from = "score"
