@@ -9,7 +9,7 @@ library(tibble)
 library(tidyr)
 library(dplyr)
 library(visNetwork)
-library(biomaRt)
+#library(biomaRt)
 library(ggplot2)
 library(pheatmap)
 library(BiocParallel)
@@ -45,7 +45,8 @@ if (exists("snakemake")) {
   mem_mb <- snakemake@resources[["mem_mb"]]
   time_limit <- (snakemake@resources[["time_min"]] - 20) * 60
   run_vanilla <- snakemake@params[["run_vanilla"]]
-  perturbation_gene <- snakemake@params[["perturbation_gene"]]
+  perturbation_gene <- snakemake@params[["perturbation_gene"]] %>% unlist()
+  print(perturbation_gene)
   progeny_data <- "../data/progenyMembers.RData"
 } else {
   BASE_ANALYSIS_DIR <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/APLNR_KO"
@@ -57,7 +58,7 @@ if (exists("snakemake")) {
   register(SerialParam())
   s_groups <- c("AplnKO", "basal")
   contrast_name <- glue::glue("{contrast_groups[[1]]} vs {contrast_groups[[2]]}")
-  the_yaml <- yaml::read_yaml("../configs/VascAge_APLN_KO.yaml")
+  the_yaml <- yaml::read_yaml("./configs/VascAge_APLNR_KO.yaml")
   comp_groups <- the_yaml$comp_groups
   color_scheme <- the_yaml$group_colors
   carnival_output <- "./test_output.RDS.gz"
@@ -68,6 +69,7 @@ if (exists("snakemake")) {
   time_limit <- 3600
   run_vanilla <- TRUE
   progeny_data <- "./data/progenyMembers.RData"
+  perturbation_gene <- c(Aplnr = -1)
 }
 
 # Read DESeq2 oobject and other tables
@@ -102,19 +104,22 @@ joined_df %>%
 
 # regulons <- dorothea_mm %>% dplyr::filter(confidence %in% c('A', 'B'))
 organism <- "mouse"
-doro_net <- decoupleR::get_dorothea(organism = organism, levels = c("A", "B", "C"))
-prog_net <- decoupleR::get_progeny(organism = organism, top = 100)
+#doro_net <- decoupleR::get_dorothea(organism = organism, levels = c("A", "B", "C"))
+doro_net <- decoupleR::get_collectri(organism = organism)
+prog_net <- decoupleR::get_progeny(organism = organism, top = 500)
 
-PathwayActivity <- PathwayActivity_CARNIVALinput <- run_wmean(
+PathwayActivity <- PathwayActivity_CARNIVALinput <- decoupleR::run_mlm(
   mat = diffexp_matrix, network = prog_net, .source = "source",
-  .target = "target", .mor = "weight", times = 1000, minsize = 5
+  .target = "target", .mor = "weight",  minsize = 5
 ) %>%
-  dplyr::filter(statistic == "wmean") %>%
+  dplyr::filter(statistic == "mlm") %>% 
+  dplyr::mutate(padj = p.adjust(p_value, method = "BH")) %>%
+  dplyr::filter(padj < 0.05) %>%
   as.data.frame()
-if (any(abs(PathwayActivity$score) > 1)) {
-  PathwayActivity$score <- sign(PathwayActivity$score) * (1 - PathwayActivity$p_value)
-  warning("decoupler based enriched failed, falling back on (1-pvalue) * sign(score)")
-}
+#if (any(abs(PathwayActivity$score) > 1)) {
+#  PathwayActivity$score <- sign(PathwayActivity$score) * (1 - PathwayActivity$p_value)
+#  warning("decoupler based enriched failed, falling back on (1-pvalue) * sign(score)")
+#}
 # PathwayActivity <- PathwayActivity_CARNIVALinput <- progeny(diffexp_matrix, scale = TRUE, organism = 'Mouse', top =
 # 100, perm = 10000, z_scores = F ) %>% t() %>% as.data.frame() %>% tibble::rownames_to_column(var = 'Pathway')
 
@@ -123,25 +128,38 @@ progeny_key <- setNames(object = PathwayActivity$score, nm = PathwayActivity$sou
 
 prog_net %>%
   mutate(progeny_activity = recode(source, !!!progeny_key)) %>%
-  mutate(carnival_score = sign(weight) * progeny_activity) -> prog_net
-prog_net %>%
+  mutate(carnival_score = weight * progeny_activity) -> prog_net
+
+if (length(names(progeny_key)) > 1) {
+prog_net %>% dplyr::filter(source %in% names(progeny_key)) %>%
   group_by(target) %>%
   summarise(carnival_score = mean(carnival_score)) -> prog_net_final
-
-tf_activities_stat <- decoupleR::run_wmean(diffexp_matrix, network = doro_net, times = 1000, minsize = 5) %>%
-  filter(statistic == "norm_wmean")
+} else {
+  prog_net %>% dplyr::filter(source %in% names(progeny_key)) %>%
+    group_by(target) ->  prog_net_final
+}
+tf_activities_stat <- decoupleR::run_ulm(diffexp_matrix, network = doro_net, minsize = 5) %>%
+  filter(statistic == "ulm")
 # options = list( minsize = 5, eset.filter = FALSE, cores = 1, verbose = FALSE, nes = TRUE ) )
+
+
 
 prog_net_final %>%
   filter(!(target %in% tf_activities_stat$source)) -> prog_net_final
 
-tf_activities <- tf_activities_CARNIVALinput <- tf_activities_stat %>%
+tf_activities <- tf_activities_CARNIVALinput <- tf_activities_stat %>% dplyr::mutate(padj = p.adjust(p_value, method = "BH")) %>%
+  dplyr::filter(padj < 0.05) %>%
   dplyr::select(source, score)
 
 
 ## Get Omnipath
-omniR <- import_omnipath_interactions(organism = 10090)
-# omniR <- import_pathwayextra_interactions(organism = 10090) signed and directed
+if (run_vanilla) {
+  omniR <- import_omnipath_interactions(organism = 10090) #signed and directed
+  ##omniR <- import_all_interactions(organism = 10090) %>% dplyr::filter(n_references > 0)
+} else {
+  omniR <- import_omnipath_interactions(organism = 10090) #signed and directed
+}
+#omniR <- import_omnipath_interactions(organism = 10090) #signed and directed
 omnipath_sd <- omniR %>%
   dplyr::filter(consensus_direction == 1 & (consensus_stimulation == 1 | consensus_inhibition == 1))
 
@@ -182,8 +200,11 @@ names(tf_vec) <- gsub("^Trp", "Tp", names(tf_vec))
 # PathwayActivity_carnival$Pathway PathwayActivity_carnival$Pathway <- NULL progenylist <- assignPROGENyScores( progeny
 # = t(PathwayActivity_carnival), progenyMembers = progenyMembers, id = 'gene', access_idx = 1 ) progeny_vec <-
 # progenylist$score
+prog_net_final %>% dplyr::filter(target %in% sif$source | target %in% sif$target) -> prog_net_final
 progeny_vec <- setNames(prog_net_final$carnival_score, nm = prog_net_final$target)
-# get initial nodes
+# scale vec
+progeny_vec <- scales::rescale(unlist(progeny_vec), to = c(-1,1))
+
 
 lp_opts <- CARNIVAL::defaultCplexCarnivalOptions(
   solverPath = cplex_path, cplexMemoryLimit = mem_mb, threads = thread_num,
@@ -202,9 +223,17 @@ dir.create(lp_opts$outputFolder, showWarnings = F, recursive = T)
 dir.create(file.path(temp_path, "carnout"), recursive = T, showWarnings = F)
 # setwd(file.path(temp_path, 'carnout'))
 if (run_vanilla) {
+  pert_vec  <- perturbation_gene
+  #sif<- CARNIVAL::prune_network(sif[c(1,3,2)], upstream_nodes = names(pert_vec), 
+  #downstream_nodes = names(unlist(tf_vec)))[c(1,3,2)]
+  
+  # check if tf_vec names are in sif source or targets
+  tf_vec <- tf_vec[names(tf_vec) %in% c(sif$source, sif$target)]
   carnival_result <- runVanillaCarnival(
-    perturbations = c(perturbation_gene = 1), measurements = unlist(tf_vec), priorKnowledgeNetwork = sif,
-    weights = unlist(progeny_vec), carnivalOptions = lp_opts
+    perturbations = pert_vec, measurements = unlist(tf_vec), 
+    priorKnowledgeNetwork = sif,
+    weights = progeny_vec, 
+    carnivalOptions = lp_opts
   )
 } else {
   carnival_result <- runInverseCarnival(

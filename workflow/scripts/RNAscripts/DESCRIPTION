@@ -15,6 +15,7 @@ Imports:
   clusterProfiler,
   DESeq2,
   dplyr,
+  enrichplot,
   magrittr,
   msigdbr,
   org.Mm.eg.db,
@@ -28,7 +29,9 @@ Imports:
   svglite,
   DT,
   glue,
-  ReactomePA
+  ReactomePA,
+  readxl,
+  tidyr
 Suggests:
   ComplexHeatmap,
   rlang,

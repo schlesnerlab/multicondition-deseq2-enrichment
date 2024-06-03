@@ -197,7 +197,7 @@ rule run_mitch:
             BASE_ANALYSIS_DIR, "results/diffexp/mitch/{condition}_mitch_report.html"
         ),
     params:
-        contrasts=config["diffexp"]["contrasts"].keys(),
+        contrasts=get_all_contrasts,
     conda:
         "../envs/R_4.yaml"
     log:

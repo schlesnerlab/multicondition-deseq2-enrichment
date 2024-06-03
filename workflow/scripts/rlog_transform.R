@@ -53,11 +53,13 @@ stable_get_bm <- function(species) {
   mart
 }
 
-mart <- stable_get_bm(species)
+#mart <- stable_get_bm(species)
+mart <- biomaRt::useEnsembl(biomart = "ENSEMBL_MART_ENSEMBL", dataset = glue::glue("{species}_gene_ensembl"))
 # df <- read.table(snakemake@input']], sep='\t', header=1)
 gene_name_type <- snakemake@config[["gene_name_type"]]
 if (gene_name_type == "ENSEMBL") {
-  g2g <- biomaRt::getBM(attributes = c("ensembl_gene_id", "external_gene_name"), filters = "ensembl_gene_id", values = stringr::str_extract(norm_counts$gene,
+  g2g <- biomaRt::getBM(attributes = c("ensembl_gene_id", "external_gene_name"), 
+  filters = "ensembl_gene_id", values = stringr::str_extract(norm_counts$gene,
     pattern = "^ENS[A-Z0-9]*"
   ), mart = mart, )
   colnames(g2g) <- c("gene", "gname")

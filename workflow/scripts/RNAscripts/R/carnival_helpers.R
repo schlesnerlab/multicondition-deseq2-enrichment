@@ -304,9 +304,9 @@ get_organism_omnipath_id <- function(organism_name) {
 #' @examples NULL
 get_organism_omnipath_name <- function(organism_name) {
   if (organism_name == "Homo sapiens") {
-    org_num <- "Human"
+    org_num <- "human"
   } else if (organism_name == "Mus musculus") {
-    org_num <- "Mouse"
+    org_num <- "mouse"
   } else {
     stop(
       "Organism not supported. Please select a supported organism \n Mus musculus or Homo sapiens"

@@ -109,6 +109,8 @@ gsea_test <- function(DE_genes, T2G, input_type = "gene_symbol", ...) {
   if (input_type == "ENSEMBL") {
     DE_genes[, 1] <- stringr::str_extract(string = DE_genes %>%
       dplyr::pull(1), "^ENS[A-Z0-9]*")
+   
+    T2G[, 2] <- stringr::str_extract(string = T2G %>% dplyr::pull(2), "^ENS[A-Z0-9]*")
   }
   glist <- stats::setNames(DE_genes[, 2], nm = DE_genes[, 1]) %>%
     sort(decreasing = TRUE)
@@ -133,6 +135,7 @@ gsea_test <- function(DE_genes, T2G, input_type = "gene_symbol", ...) {
 #' @param translation_table named list translating gene IDs from \link{table_to_list}
 #' @param msdb_var Variable to use for gsea from msgdbr table \link[msigdbr]{msigdbr}
 #' @param input_type Type of input in gset_list
+#' @param custom_geneset Custom gene set to use instead of msigdb. Format is a data.frame with two columns
 #' @param ... Parameters passed to enichment functions from clusterProfiler
 #'
 #' @return \link[DOSE]{enrichResult-class} of given information
@@ -141,15 +144,24 @@ run_msig_enricher <- function(gset_list, category = NULL, species = "Mus musculu
                               subcategory = NULL,
                               GSEA = TRUE, universe = NULL, translation_table = NULL,
                               msdb_var = "gene_symbol", input_type = "gene_symbol",
+                              custom_geneset = NULL,  # Neuer Parameter für benutzerdefiniertes Gen-Set
                               ...) {
   stopifnot(class(gset_list) == "list")
   col_names <- c("gs_name", msdb_var)
-  msg_class <- msigdbr::msigdbr(
-    species = species,
-    category = category,
-    subcategory = subcategory
-  ) %>%
-    dplyr::select(col_names)
+  
+  # Überprüfen Sie, ob ein benutzerdefiniertes Gen-Set bereitgestellt wurde
+  if (is.null(custom_geneset)) {
+    msg_class <- msigdbr::msigdbr(
+      species = species,
+      category = category,
+      subcategory = subcategory
+    ) %>%
+      dplyr::select(col_names)
+  } else {
+    # Verwenden Sie das benutzerdefinierte Gen-Set, wenn es bereitgestellt wurde
+    msg_class <- custom_geneset
+  }
+  
   if (!is.null(translation_table)) {
     msg_class <- transform_glist(msg_class, translation_table)
   }
@@ -180,12 +192,13 @@ run_msig_enricher <- function(gset_list, category = NULL, species = "Mus musculu
 #' @param gset_config gset config object
 #' @param species species name
 #' @param org_db org.mm.eg.db
+#' @param t_table translation_table to convert EnsemblIDs to gene symbols
 #' 
 #' @return List with results enrichment analysis \link[DOSE]{enrichResult-class}
 #' @export
 #' 
 run_gsea_query <- function(gsea_genes, de_genes, gset_name, 
-                          gset_config, species, org_db) {
+                          gset_config, species, org_db, t_table = NULL) {
   run_settings <- gset_config[[gset_name]]
   if (run_settings$use_gsea) {
     gene_list <- gsea_genes
@@ -212,8 +225,47 @@ run_gsea_query <- function(gsea_genes, de_genes, gset_name,
     enrich_obj <- ReactomePA::gsePathway(g_vec,
                                                  tolower(RNAscripts::get_organism_omnipath_name(organism)),
                                                  )
+  } else if (tolower(run_settings$database) == "custom_senescence") {
+    # TODO: Add Human Version
+    if (species == "Mus musculus") {
+      senescence_genes <- RNAscripts::senes
+    } else {
+      stop("Species not supported yet. senescence gene set only available for Mus musculus")
+    }
+
+    # Transform from tibble to dataframe for clusterProfiler
+    senescence_genes <- as.data.frame(senescence_genes)
+    # Convert gene symbols to ENSEMBL IDs using named list t_table
+    if (!is.null(t_table)) {
+      ensembl_senes <- senescence_genes
+      ensembl_senes[,2] <- t_table[as.character(ensembl_senes %>% dplyr::pull(2))] %>% as.character()
+      # remove all rows where no ENSEMBL ID was found (NULL in second column)
+      ensembl_senes <- ensembl_senes %>% dplyr::filter(!(ensembl_senes[,2])== "NULL")
+      senescence_genes <- ensembl_senes
+    }
+    # Run GSEA
+
+    enrich_obj <- gsea_test(DE_genes =  gene_list,
+      T2G = senescence_genes,
+      input_type = "ENSEMBL")
+
+  } else if (tolower(run_settings$database) == "mitocarta") {
+    if (species == "Mus musculus") {
+      mito_genes <- RNAscripts::MitoPathways
+    } else {
+      stop("Species not supported yet. MitoCarta gene set only available for Mus musculus")
+    }
+
+    # Transform from tibble to dataframe for clusterProfiler
+    mito_genes <- as.data.frame(mito_genes)
+    # Since we are using ENSEMBL IDs we delete gene symbols columns
+    mito_genes <- mito_genes %>% dplyr::select(GeneSet, EnsemblGeneID)    
+
+    enrich_obj <- gsea_test(DE_genes =  gene_list,
+      T2G = mito_genes,
+      input_type = "ENSEMBL")
   } else {
-    stop(glue::glue("{database} not supported, pleasue use MSigDB, kegg or Reactome"))
+    stop(glue::glue("{run_settings$database} not supported, pleasue use MSigDB, kegg or Reactome"))
   }
   gc()
   enrich_obj
@@ -369,12 +421,21 @@ get_kegg_name <- function(org_name) {
   kegg_name
 }
 
-
+#' improved code to perform a dotplot
+#' 
+#' @param gset GSEA result from Cluster Profiler
+#' @param c_groups contrast groups vector of length 2. 
+#' 
+#' @return list of length two with two dotplot reults
+#' @export 
+#' 
+#' @examples NULL
 better_dotplot <- function(gset, c_groups = contrast_groups) {
-  pos_gsea <- gset %>% dplyr::filter(NES > 0.5)
-  if (nrow(pos_gsea) > 1) {
+  pos_gsea <- gset
+  pos_gsea@result <- gset@result[gset@result$NES > 0, ]
+  if (nrow(pos_gsea) >= 1) {
     dp_pos_NES <-
-      dotplot(
+      enrichplot::dotplot(
         pos_gsea,
         size = "NES",
         color = "p.adjust",
@@ -385,11 +446,11 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
   } else {
     dp_pos_NES <- NULL
   }
-
-  neg_gsea <- gset %>% dplyr::filter(NES < -0.5)
-  if (nrow(neg_gsea) > 1) {
+  neg_gsea <- gset
+  neg_gsea@result <- gset[gset@result$NES < 0, ]
+  if (nrow(neg_gsea) >= 1) {
     dp_neg_NES <-
-      dotplot(
+      enrichplot::dotplot(
         neg_gsea,
         size = "NES",
         color = "p.adjust",
