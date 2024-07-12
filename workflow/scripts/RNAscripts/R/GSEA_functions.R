@@ -434,6 +434,16 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
   pos_gsea <- gset
   pos_gsea@result <- gset@result[gset@result$NES > 0, ]
   if (nrow(pos_gsea) >= 1) {
+    num_y_entries <- nrow(pos_gsea)
+    # Define the base font size
+    base_font_size <- 18
+    
+    # Define the scaling factor (adjust as needed)
+    scaling_factor <- 0.95
+    
+    # Calculate the new font size
+    new_font_size <- base_font_size * scaling_factor / log(num_y_entries + 1)
+    
     dp_pos_NES <-
       enrichplot::dotplot(
         pos_gsea,
@@ -442,13 +452,23 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
         showCategory = 50,
         title = glue::glue("Pathways enriched in {c_groups[1]}")
       ) +
-      scale_size(range = c(1, 7), limits = c(1, max(gset@result$NES)))
+      scale_size(range = c(1, 7), limits = c(1, max(gset@result$NES))) + 
+      theme(axis.text.y = element_text(size = new_font_size)) 
   } else {
     dp_pos_NES <- NULL
   }
   neg_gsea <- gset
   neg_gsea@result <- gset[gset@result$NES < 0, ]
   if (nrow(neg_gsea) >= 1) {
+    num_y_entries <- nrow(neg_gsea)
+    # Define the base font size
+    base_font_size <- 18
+    
+    # Define the scaling factor (adjust as needed)
+    scaling_factor <- 0.95
+    
+    # Calculate the new font size
+    new_font_size <- base_font_size * scaling_factor / log(num_y_entries + 1)
     dp_neg_NES <-
       enrichplot::dotplot(
         neg_gsea,
@@ -457,7 +477,8 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
         showCategory = 50,
         title = glue::glue("Pathways enriched in {c_groups[2]}")
       ) +
-      scale_size(range = c(7, 1), limits = c(min(gset@result$NES), -1))
+      scale_size(range = c(7, 1), limits = c(min(gset@result$NES), -1)) + 
+      theme(axis.text.y = element_text(size = new_font_size)) 
   } else {
     dp_neg_NES <- NULL
   }

@@ -116,7 +116,7 @@ if (organism == "Mus musculus") {
 } else {
   stop("Organism not supported. Please set Mus musculus or Homo sapiens in the config")
 }
-net <- decoupleR::get_collectri(organism = org_name)
+net <- decoupleR::get_collectri(organism = org_name) %>% dplyr::filter(!is.na(source) & !is.na(target))
 write(colnames(net), stderr())
 write(head(rownames(Normalized_counts)), stderr())
 write(head(net$target), stderr())
@@ -128,8 +128,9 @@ deg <- joined_df %>%
   as.matrix() -> diffexp_matrix
 design <- dds_obj@colData
 sample_acts <- decoupleR::run_ulm(
-  mat = Normalized_counts, network = net, .source = "source", .target = "target",
-  .mor = "mor",  minsize = 5
+  mat = Normalized_counts, network = net,# .source = "source", .target = "target",
+  #.mor = "mor",  
+  minsize = 5
 )
 n_tfs <- 30
 

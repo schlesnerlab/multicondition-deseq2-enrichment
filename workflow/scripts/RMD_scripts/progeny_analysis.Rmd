@@ -38,7 +38,7 @@ if (exists("snakemake")) {
   color_scheme <- snakemake@config[["group_colors"]][[cond_id]]
   organism <- snakemake@config[["organism"]]
 } else {
-  the_yaml <- yaml::read_yaml("../../../config/workflow_unit_test.yaml")
+  the_yaml <- yaml::read_yaml("../../../configs/VascAge_config.yaml")
   #snakedir <- "/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment"
   #BASE_ANALYSIS_DIR <- file.path(snakedir, "data/STAD")
   BASE_ANALYSIS_DIR <- the_yaml$dirs$BASE_ANALYSIS_DIR
@@ -240,9 +240,7 @@ NES_plot
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
 ```{r, eval= ifelse(nrow(Normalized_counts) > 1000, TRUE, FALSE)} 
-prog_matrix <- getModel(org_name, top = 100) %>%
-  as.data.frame() %>%
-  tibble::rownames_to_column("GeneID")
+
 
 ttop_KOvsWT_df <- diffexp_matrix %>%
   as.data.frame() 

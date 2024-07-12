@@ -60,7 +60,7 @@ if (exists("snakemake")) {
     BASE_ANALYSIS_DIR,
     glue::glue("results/diffexp/{cond_id}/{names(conf$diffexp$contrasts[[cond_id]])}.diffexp.tsv")
   ))
-  contrast_list <- names(conf$diffexp$contrasts$SARIFA)
+  contrast_list <- names(conf$diffexp$contrasts$condition)
 
   fpkm_path <- file.path(BASE_ANALYSIS_DIR, "fpkm/all.tsv")
   dds_path <- file.path(BASE_ANALYSIS_DIR, "deseq2/all.rds")
@@ -359,14 +359,14 @@ do so in the aged samples, hinting that the affect of apelin may differ between 
 The second group of plots give an overview of the first 5 PCs, but no clear splits can be identified in the smaller PCs. 
 
 ```{r echo = FALSE, fig.height = 8, fig_width = 8}
-PCAtools::biplot(pca_data, colby = cond_id, legendPosition = "right")
+PCAtools::biplot(pca_data, colby = cond_id, colkey = group_colors,  legendPosition = "right",  lab = NULL)
 plot <- PCAtools::pairsplot(pca_data,
   components = PCAtools::getComponents(pca_data, c(1:5)),
   triangle = F,
   hline = 0, vline = 0,
   pointSize = 0.8,
   gridlines.major = FALSE, gridlines.minor = FALSE,
-  colby = cond_id,
+  colby = cond_id, colkey = group_colors,
   title = "Pairs plot", plotaxes = T,
   margingaps = ggplot2::unit(c(-0.01, -0.01, -0.01, -0.01), "cm"),
   legendPosition = "none"
