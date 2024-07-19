@@ -30,7 +30,6 @@ logs
 scripts/RNAscripts.Rcheck
 *.Rproj
 *.html
-*.txt
 *.lp
 *.log
 *.RData
