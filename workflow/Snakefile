@@ -56,13 +56,14 @@ if config["run_carnival"]["vanilla"]:
     print(CARNIVAL_COND)
     if False:
         salmon_files.extend(
-        expand(
-            join(
-                BASE_ANALYSIS_DIR, "results/reports/{type}/{condition}/join_report.html"
-            ),
-            type=["carnival"],
-            condition=CARNIVAL_COND.keys(),
-        )
+            expand(
+                join(
+                    BASE_ANALYSIS_DIR,
+                    "results/reports/{type}/{condition}/join_report.html",
+                ),
+                type=["carnival"],
+                condition=CARNIVAL_COND.keys(),
+            )
         )
 
     for cond in CARNIVAL_COND:
