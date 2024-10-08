@@ -39,8 +39,8 @@ across all comparison groups defined in the original yaml.
 if (exists("snakemake")) {
   carnival_paths <- snakemake@input[["carnival_objs"]] %>% as.character()
   cond_id <- snakemake@wildcards[["condition"]]
-  names(carnival_paths) <- names(snakemake@config[["diffexp"]][["contrasts"]][[cond_id]])
-  contrast_names <- names(snakemake@config[["diffexp"]][["contrasts"]][[cond_id]])
+  names(carnival_paths) <- names(snakemake@config[["run_carnival"]][["cond_to_run"]][[cond_id]])
+  contrast_names <- names(snakemake@config[["run_carnival"]][["cond_to_run"]][[cond_id]])
   write(carnival_paths, file = stderr())
   write(names(carnival_paths), file = stderr())
   tt_basepath <- snakemake@params[["tutorial_source_path"]]
@@ -56,10 +56,10 @@ if (exists("snakemake")) {
   BASE_ANALYSIS_DIR <- yaml_me$dirs$BASE_ANALYSIS_DIR
   carnival_paths <- file.path(
     BASE_ANALYSIS_DIR, "results/carnival/condition",
-    paste0(names(yaml_me$diffexp$contrasts$condition), "_carnival_res.RDS.gz")
+    paste0(yaml_me$run_carnival$cond_to_run$condition, "_carnival_res.RDS.gz")
   )
-  names(carnival_paths) <- names(yaml_me$diffexp$contrasts$condition)
-  contrast_names <- names(yaml_me$diffexp$contrasts$condition)
+  names(carnival_paths) <- yaml_me$run_carnival$cond_to_run$condition
+  contrast_names <- yaml_me$run_carnival$cond_to_run$condition
   base_path <- ""
   tt_basepath <- "../transcriptutorial"
   organism <- "Mus musculus"

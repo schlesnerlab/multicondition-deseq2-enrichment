@@ -26,7 +26,7 @@ rule run_carnival_vanilla:
     resources:
         nr=lambda wildcards, attempt: attempt,
         mem_mb=81920,
-        time_min=(9 * 60) + 20,
+        time_min=(25 * 60) + 20,
     log:
         "logs/carnival/{condition}/{contrast}_carn.log",
     script:
