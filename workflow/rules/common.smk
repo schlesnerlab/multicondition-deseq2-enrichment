@@ -151,7 +151,7 @@ def get_carnival_objs(wildcards):
             BASE_ANALYSIS_DIR,
             "results/{{type}}/{{condition}}/{contrast}_carnival_res.RDS.gz",
         ),
-        contrast=config["diffexp"]["contrasts"][cond],
+        contrast=config["run_carnival"]["cond_to_run"][cond],
     )
     return output_files
 

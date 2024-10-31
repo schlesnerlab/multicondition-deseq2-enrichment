@@ -52,7 +52,7 @@ if (exists("snakemake")) {
   group_colors <- snakemake@config[["group_colors"]][[cond_id]] %>% unlist()
   run_pert <- snakemake@config[["perform_perturbation"]]
 } else {
-  conf <- yaml::read_yaml("../../configs/VascAge_config.yaml")
+  conf <- yaml::read_yaml("../../configs/VascAge_Apelin_inhib.yaml")
   SARIFA_DIR <- "/Users/heyechri/Documents/software/heyer/multicondition-deseq2-enrichment"
   BASE_ANALYSIS_DIR <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
   cond_id <- names(conf$diffexp$contrasts)[1]

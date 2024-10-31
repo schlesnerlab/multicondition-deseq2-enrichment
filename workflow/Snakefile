@@ -52,31 +52,36 @@ if config["run_mitch"]:
     )
 
 if config["run_carnival"]["vanilla"]:
-    salmon_files.extend(
-        expand(
-            join(
-                BASE_ANALYSIS_DIR, "results/reports/{type}/{condition}/join_report.html"
-            ),
-            type=["carnival"],
-            condition=CONTRASTS.keys(),
+    CARNIVAL_COND = config["run_carnival"]["cond_to_run"]
+    print(CARNIVAL_COND)
+    if False:
+        salmon_files.extend(
+            expand(
+                join(
+                    BASE_ANALYSIS_DIR,
+                    "results/reports/{type}/{condition}/join_report.html",
+                ),
+                type=["carnival"],
+                condition=CARNIVAL_COND.keys(),
+            )
         )
-    )
 
-    for cond in CONTRASTS:
+    for cond in CARNIVAL_COND:
         salmon_files.extend(
             expand(
                 join(
                     BASE_ANALYSIS_DIR,
                     "results/reports/{type}/{condition}/{contrast}_results.html",
                 ),
-                contrast=CONTRASTS[cond],
+                contrast=CARNIVAL_COND[cond],
                 condition=cond,
                 type=["carnival"],
             )
         )
 if config["run_carnival"]["inverse"]:
+    CARNIVAL_COND = config["run_carnival"]["cond_to_run"]
     if config["run_carnival"]["joint_rep"]:
-        for cond in CONTRASTS:
+        for cond in CARNIVAL_COND:
             salmon_files.extend(
                 expand(
                     join(
@@ -87,14 +92,14 @@ if config["run_carnival"]["inverse"]:
                     condition=cond,
                 )
             )
-    for cond in CONTRASTS:
+    for cond in CARNIVAL_COND:
         salmon_files.extend(
             expand(
                 join(
                     BASE_ANALYSIS_DIR,
                     "results/reports/{type}/{condition}/{contrast}_results.html",
                 ),
-                contrast=CONTRASTS[cond],
+                contrast=CARNIVAL_COND[cond],
                 condition=cond,
                 type=["inversecarnival"],
             )

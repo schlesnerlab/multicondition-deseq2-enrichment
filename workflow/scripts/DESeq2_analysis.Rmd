@@ -74,11 +74,11 @@ if (exists("snakemake")) {
   organism <- snakemake@config[["organism"]]
   conf <- snakemake@config
 } else {
-  conf <- yaml::read_yaml("../../configs/tec_age_young.yaml")
+  conf <- yaml::read_yaml("../../configs/VascAge_config.yaml")
   base_analysis_dir <- file.path(conf$dirs$BASE_ANALYSIS_DIR)
 
-  cond_id <- names(conf$diffexp$contrasts)[3]
-  comp_id <- names(conf$diffexp$contrasts[[cond_id]])[1]
+  cond_id <- names(conf$diffexp$contrasts)[1]
+  comp_id <- names(conf$diffexp$contrasts[[cond_id]])[3]
   contrast_groups <- conf$diffexp$contrasts[[cond_id]][[comp_id]]
   coef_string <- paste0(
     cond_id, "_", contrast_groups[[1]], "_vs_",
@@ -106,7 +106,7 @@ if (exists("snakemake")) {
 
   group_colors <- conf[["group_colors"]][[cond_id]] %>% unlist()
   organism <- conf$organism
-  lfc_shrink <- FALSE
+  lfc_shrink <- TRUE
   model_string <- "~ condition"
 }
 
@@ -185,7 +185,7 @@ deseq_tb <- readr::read_tsv(diffexp_tb_path,
   ),
   skip = 1
 )
-
+"../"
 sample_overview <- sample_overview %>%
   dplyr::filter(sample %in% rownames(colData(dds_obj)))
 
@@ -272,7 +272,7 @@ volcano_plot <- EnhancedVolcano(as.data.frame(joined_df),
   x = "logFoldChange",
   y = "padj",
   title = paste(contrast_groups, collapse = "_vs_"),
-  pCutoff = 10e-3,
+  pCutoff = pvalue_threshold,
   ylab = bquote(~ -Log[10] ~ italic(Padj)), FCcutoff = lfc_threshold
 )
 ggsave(

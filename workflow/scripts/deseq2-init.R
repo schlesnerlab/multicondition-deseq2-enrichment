@@ -59,6 +59,7 @@ if (any(is.na(coldata[, c(all_conditions)]))) {
 all_conditions <- names(snakemake@config$diffexp$contrasts)
 for (x in all_conditions) {
   coldata[, x] <- as.factor(coldata[, x])
+  coldata[, x] <- relevel(coldata[, x], ref = snakemake@config$diffexp$contrasts[[x]][[1]][[2]])
 }
 
 dds <- DESeqDataSetFromMatrix(
