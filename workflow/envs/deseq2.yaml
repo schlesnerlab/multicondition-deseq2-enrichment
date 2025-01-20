@@ -10,11 +10,14 @@ dependencies:
   - bioconductor-biobase 
   - bioconductor-biocgenerics
   - bioconductor-biocparallel
+  - bioconductor-biomart
   - bioconductor-clusterprofiler
   - bioconductor-complexheatmap
   - bioconductor-delayedarray
+  - bioconductor-dose
   - bioconductor-do.db
   - bioconductor-edger
+  - bioconductor-enrichplot
   - bioconductor-enhancedvolcano
   - bioconductor-genefilter
   - bioconductor-geneplotter
@@ -61,6 +64,7 @@ dependencies:
   - r-getopt 
   - r-ggplot2 
   - r-ggupset
+  - r-glue
   - r-gplots 
   - r-gridextra 
   - r-gtable 
@@ -94,12 +98,14 @@ dependencies:
   - r-pkgconfig 
   - r-plogr 
   - r-plyr 
+  - r-purrr
   - r-rvcheck
   - r-rcolorbrewer 
   - r-rcpp 
   - r-rcpparmadillo 
   - r-rcurl 
   - r-readr
+  - r-readxl
   - r-reshape2 
   - r-rjson 
   - r-rlang 
@@ -111,8 +117,10 @@ dependencies:
   - r-stringi 
   - r-stringr 
   - r-survival 
+  - r-svglite
   - r-tibble 
-  - r-tidyverse
+  - r-tidyselect
+  - r-tidyr
   - r-upsetr
   - r-viridis 
   - r-viridislite 

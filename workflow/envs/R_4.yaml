@@ -3,15 +3,17 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - bioconductor-apeglm
   - bioconductor-annotationhub
+  - bioconductor-apeglm
+  - bioconductor-bsgenome.hsapiens.ucsc.hg38
+  - bioconductor-bsgenome.mmusculus.ucsc.mm10
   - bioconductor-carnival
   - bioconductor-chipseeker
   - bioconductor-clusterprofiler
   - bioconductor-complexheatmap
   - bioconductor-decoupler
   - bioconductor-deseq2
-  - bioconductor-dorothea
+  #- bioconductor-dorothea
   - bioconductor-ensembldb
   - bioconductor-enhancedvolcano
   - bioconductor-genomicranges
@@ -33,9 +35,9 @@ dependencies:
   - r-furrr
   - r-ggnewscale
   - r-ggplot2
+  - r-ggpubr
   - r-ggupset
   - r-ggsignif
-  - r-knitr
   - r-knitr
   - r-magrittr
   - r-msigdbr
@@ -48,5 +50,13 @@ dependencies:
   - r-rvcheck
   - r-svglite
   - r-tidyverse
-  - bioconductor-bsgenome.hsapiens.ucsc.hg38
-  - bioconductor-bsgenome.mmusculus.ucsc.mm10
+  - r-MASS
+  - r-car
+  - r-glmmTMB
+  - r-lme4
+  - r-lmerTest
+  - r-plotly
+  - bioconductor-qvalue
+  - r-emmeans
+  - r-pbapply
+  - r-pbmcapply
