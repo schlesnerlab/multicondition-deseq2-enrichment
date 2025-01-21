@@ -88,7 +88,7 @@ if (exists("snakemake")) {
     glmmseq_file <- snakemake@input[["glmmseq_obj"]]
     enrichment_obj <- snakemake@output[["enrichment_obj"]]
     enrichments <- snakemake@params[["enrichments"]]
-    coef_name <- snakemake@params[["coef_name"]]
+    coef <- snakemake@params[["coef_name"]]
     var <- snakemake@wildcards[["var"]]
     gset_config <- snakemake@config[["glmmseq"]][["enrichments"]]
 } else {
@@ -111,7 +111,7 @@ if (exists("snakemake")) {
   )
 )
 }
-
+write(c(coef,var), file = stderr())
 glmmseq_list <- readRDS(glmmseq_file)
 glmmseq_list$norm_counts <- glmmSeq::glmmQvals(glmmseq_list$norm_counts)
 

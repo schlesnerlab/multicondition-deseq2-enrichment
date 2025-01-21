@@ -74,7 +74,7 @@ rule run_glmmseq_enrichments:
         time_min = 59
     threads: 1
     script:
-        "../scripts/glmmseq/{var}_glmmseq_enrichments.R"
+        "../scripts/glmmseq/glmmseq_enrichments.R"
 
 rule visualize_enrichments:
     input:
@@ -100,7 +100,7 @@ rule glmmseq_heatmap:
         glmmseq_obj = join(BASE_ANALYSIS_DIR, "glmmseq/glmmseq_obj.rds.gz"),
         batch_corrected_counts = join(BASE_ANALYSIS_DIR, "counts/batch_corrected_counts.rds")
     output:
-        html_file = join(BASE_ANALYSIS_DIR, "glmmseq/{var}_heatmaps.png")
+        png_file = join(BASE_ANALYSIS_DIR, "glmmseq/{var}_heatmaps.png")
     params:
         coef = get_coef_name
     conda:

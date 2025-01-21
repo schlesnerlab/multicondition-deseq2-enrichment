@@ -5,12 +5,40 @@ library(glmmSeq)
 if (exists("snakemake")) {
     glmmseq_obj <- snakemake@input[["glmmseq_obj"]]
     corrected_counts <- snakemake@input[["batch_corrected_counts"]]
+    out_png <- snakemake@output[["png_file"]]
     var <- snakemake@wildcards[["var"]]
     coef <- snakemake@params[["coef"]]
 } else {
-    glmmseq_obj <- "data/glmmseq_obj.rds"
-    corrected_counts <- "data/batch_corrected_counts.rds"
+    glmmseq_obj <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/glmmseq/glmmseq/glmmseq_obj.rds.gz"
+    corrected_counts <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/glmmseq/counts/batch_corrected_counts.rds"
+    coef <- "ageaged"
+    var <- "age"
 }
+annotation_colors <- list(
+  age = c(
+    aged = "#A00101",       # Tomato
+    young = "grey"       # SteelBlue
+  ),
+  EC_status = c(
+    healthy = "#98FB98",    # PaleGreen
+    tumor = "#FF69B4"       # HotPink
+  ),
+  experiment = c(
+    apelin_2020 = "#FFD700",   # Gold
+    APLNR_KO = "#FF8C00",      # DarkOrange
+    cre_2022 = "#8A2BE2",      # BlueViolet
+    Vasc_age2020 = "#7FFF00",  # Chartreuse
+    tumor_vs_ec = "#DC143C"    # Crimson
+  ),
+  Aplnr_KO = c(
+    KO = "blue",
+    normal = "grey"
+  ),
+  Apln_treatment = c(
+    up = "#77DD77",
+    normal = "grey"
+  )
+)
 
 plot_heatmap<- function(coef,vst_obj = vst_dds, glmm_obj =  glmmseq_norm_counts,
                         z_score = TRUE, use_vst = FALSE, 
@@ -123,12 +151,39 @@ plot_heatmap<- function(coef,vst_obj = vst_dds, glmm_obj =  glmmseq_norm_counts,
       max_text_width(
         rownames(plot_data)[seq(1, nrow(plot_data), 20)],
         gp = gpar(fontsize = 10,  fontface = 'bold')))
-    
+
+      png(png_file, width = 10, height = 10, units = 'in', res = 300) 
       draw(hmap + genelabels + coef_values_anno,
       heatmap_legend_side = 'left',
       annotation_legend_side = 'right',
       row_sub_title_side = 'left',annotation_legend_list = list(coef_legend))
+      dev.off()
     } else {
+      png(png_file, width = 10, height = 10, units = 'in', res = 300)
       draw(hmap + coef_values_anno, annotation_legend_list = list(coef_legend))
+      dev.off()
     }
 }
+
+# Read_glmmseq_obj
+glmmseq_obj <- readRDS(glmmseq_obj)
+# Read DDs Object 
+vst_dds <- readRDS(corrected_counts)
+# run_vst
+vst_dds <- vst(vst_dds[, rownames(glmmseq_obj$norm_counts@countdata)])
+
+
+plot_heatmap(
+  coef = c(var, coef),
+  vst_obj = vst_dds,
+  glmm_obj = glmmseq_obj$norm_counts,
+  z_score = TRUE,
+  use_vst = TRUE,
+  coldata_to_plot = c("age", "EC_status", "Apln_treatment", "Aplnr_KO", "experiment"),
+  n_genes = 30,
+  qval_filt = 0.01,
+  coef_filt = 0.8,
+  meanExp_cutoff = 7,
+  row_km = 3,
+  col_km = NULL
+)

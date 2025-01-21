@@ -108,7 +108,8 @@ sample_mat <- readr::read_tsv(samples)
 stopifnot(all(colnames(count_mat) %in% sample_mat$sample))
 # Reorder sample mat to match count mat
 sample_mat <- sample_mat[sample_mat$sample %in% colnames(count_mat),]
-
+keep <- rowSums(count_mat) >= nrow(count_mat) * 0.3
+count_mat <- count_mat[keep,]
 sample_mat[,all.vars(the_formula)] <- purrr::modify(sample_mat[,all.vars(the_formula)], as.factor )
 
 for (var_name in names(reference_groups)) {
@@ -128,8 +129,8 @@ corrected_counts <- sva::ComBat_seq(as.matrix(count_mat), batch = sample_mat |> 
 
 # Initialize DESeq2 object
 corrected_dds <- DESeqDataSetFromMatrix(corrected_counts, colData = sample_mat, design = batch_correct_model)
-keep <- rowSums(counts(corrected_dds)) >= 30
-corrected_dds <- corrected_dds[keep,]
+#keep <- rowSums(counts(corrected_dds)) >= 30
+
 corrected_dds <- DESeq(corrected_dds)
 rownames(corrected_dds) <-  ensembl_to_symbol(rownames(corrected_dds))
 
