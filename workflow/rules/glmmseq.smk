@@ -79,10 +79,13 @@ rule run_glmmseq_enrichments:
 rule visualize_enrichments:
     input:
         enrichment_obj = expand(join(BASE_ANALYSIS_DIR, "glmmseq/{var}_enrichment_obj.rds.gz"),
-                                var = config["glmmseq"]["test_group"].keys())
+                                var = config["glmmseq"]["test_group"].keys()),
+        glmmseq_obj = join(BASE_ANALYSIS_DIR, "glmmseq/glmmseq_obj.rds.gz")
     output:
         html_file = join(BASE_ANALYSIS_DIR, "glmmseq/enrichment.html")
     params: 
+        coefs = config["glmmseq"]["test_group"],
+        enrich_vars = config["glmmseq"]["enrichments"]
      #   coef = get_coef_name
     conda:
         "../envs/R_4.yaml"
