@@ -1,0 +1,34 @@
+---
+title: "Enrichment Plots"
+output: html_document
+
+--- 
+```{r setup}
+if (exists("snakemake")) {
+    glmmseq_obj <- snakemake@input[["glmmseq_obj"]]
+}
+
+gsea_plots <- function(gsea_res) {
+    purrr::map(
+            gsea_res,
+            plot_enrichment,
+            X = "ID",
+            Y = "NES",
+            pval = "pvalue",
+            n_max =50
+          )
+    gsea_plots <- purrr::map(gsea_plots, function(x) {
+          if (!is.null(x)) {
+            x + ggtitle(coef)
+          }
+          
+          list(plots = gsea_plots, res = gsea_res)
+        })
+}
+
+```
+
+
+```{r parse data}
+
+```

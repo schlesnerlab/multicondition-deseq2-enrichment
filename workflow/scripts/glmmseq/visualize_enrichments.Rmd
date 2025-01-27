@@ -1,0 +1,171 @@
+---
+title: "Visualize Enrichments"
+output: html_document
+---
+
+
+# Enrichment analysis of Glmmseq results
+
+Here, the results from Glmmseq GSEA analysis are visualized using the coefficients. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(glmmSeq)
+library(ggplot2)
+library(RNAscripts)
+
+
+get_contrast_groups <- function(glmmseq_obj, coef_name) {
+    # Split the coefficient name by ":" to check for interaction terms
+    coef_terms <- strsplit(coef_name, ":")[[1]]
+    
+    if (length(coef_terms) > 1) {
+        # Interaction term
+        interaction_levels <- interaction(glmmseq_obj@metadata[, coef_terms], drop = TRUE, sep = ".")
+        coef <- levels(interaction_levels)
+        
+        # Ensure the reference levels are correctly ordered
+        coef <- c(tail(coef, 1), head(coef,1) )
+    } else {
+        # Single term
+        if (is.factor(glmmseq_obj@metadata[, coef_name])) {
+            coef <- levels(glmmseq_obj@metadata[, coef_name])
+            # Combine non-reference levels and the reference level
+            coef <- c(coef[-1], coef[1])
+        } else {
+            coef <- unique(glmmseq_obj@metadata[, coef_name])
+            # Combine non-reference levels and the reference level
+        }
+    }
+    
+    coef
+}
+if (exists("snakemake")) {
+    glmmseq_obj <- snakemake@input[["glmmseq_obj"]]
+    enrichment_objs <- snakemake@input[["enrichment_obj"]]
+    coefs <- snakemake@params[["coefs"]]
+    enrichments <- snakemake@params[["enrich_vars"]]
+} else {
+    glmmseq_obj <-  "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/glmmseq/glmmseq/glmmseq_obj.rds.gz"
+    enrichment_objs <- c("/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/glmmseq/glmmseq/EC_status_enrichment_obj.rds.gz", 
+            "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/glmmseq/glmmseq/Aplnr_KO_enrichment_obj.rds.gz")
+    coefs <- list(
+        Aplnr_KO = "Aplnr_KOKO",
+        EC_status = "EC_statustumor"
+    )
+    enrichments <- list(
+  Hallmark_gsea = list(
+    category = "H",
+    subcategory = NULL,
+    use_gsea = TRUE,
+    database = "MSigDB",
+    id_class = "ENSEMBL"
+  ),
+  Reactome_GSEA = list(
+    category = "C2",
+    subcategory = "CP:REACTOME",
+    use_gsea = TRUE,
+    database = "MSigDB",
+    id_class = "ENTREZID"
+  )
+)
+}
+
+glmmseq_list <- readRDS(glmmseq_obj)
+enrichment_objs <- purrr::map(enrichment_objs, readRDS)
+names(enrichment_objs) <- names(coefs)
+
+
+```
+
+
+## GSEA plots {.tabset}
+
+```{r GSEA_plots, echo=FALSE, fig.width= 12, fig.height = 12, results='asis'}
+# Plot GSEA for all enrichments run per object
+
+
+# Iterate through each coefficient object
+for (coef_name in names(coefs)) {
+  cat("###", coef_name, "{.tabset}\n\n")
+  
+  # Get the corresponding enrichment object
+  enrichment_obj <- enrichment_objs[[coef_name]]
+  
+  # Iterate through each GSEA run
+  for (enrichment_name in names(enrichments)) {
+    cat("####", enrichment_name, "\n\n")
+    
+    # Get the corresponding GSEA object
+    gsea_obj <- enrichment_obj[[enrichment_name]]
+    
+    # Generate the plot
+    plot <- plot_enrichment(gsea_obj$coef@result, X = "ID", Y = "NES", pval = "pvalue",n_max = 20 )
+    write(coef_name, file = stderr()) 
+    c_groups <- get_contrast_groups(glmmseq_list$norm_counts, coef_name)
+    dplots <- RNAscripts::better_dotplot(gsea_obj$coef, c_groups )
+    # Print the plot
+    print(plot)
+    print(dplots)
+    cat("\n\n")
+  }
+}
+
+
+```
+
+
+## GSEA Heatmap
+
+Create a Heatmap of all coefficients. Only significant gene sets are shown. 
+
+```{r GSEA Heatmap, fig.width=12, fig.height=12}
+library(ComplexHeatmap)
+library(circlize)
+
+# Function to retrieve NES scores and adjusted p-values
+get_nes_pvalues <- function(gsea_obj) {
+    result <- gsea_obj$coef@result
+    result$adj_pvalue[result$p.adjust <= 0.05] <- .Machine$double.eps
+    return(result)
+}
+
+# Define a custom color palette
+col_fun <- colorRamp2(c(-2, 0, 2), c("blue", "white", "red"))
+
+# Iterate through each coefficient object
+for (enrichment_name in names(enrichments)) {
+  data_list <- list()
+
+    for (coef_name in names(coefs)) {
+    # Get the corresponding enrichment object
+    enrichment_obj <- enrichment_objs[[coef_name]]
+    
+    # Initialize an empty list to store the data
+    
+    # Iterate through each GSEA run
+        # Get the corresponding GSEA object
+        gsea_obj <- enrichment_obj[[enrichment_name]]
+        
+        # Retrieve NES scores and adjusted p-values
+        result <- get_nes_pvalues(gsea_obj)
+        
+        # Store the data in the list
+        data_list[[coef_name]] <- result
+    }
+    
+    # Aggregate the data into a matrix
+    gene_sets <- unique(unlist(lapply(data_list, function(x) x$ID)))
+    coef_names <- names(data_list)
+    nes_matrix <- matrix(0, nrow = length(coef_names), ncol = length(gene_sets), dimnames = list(coef_names, gene_sets))
+    
+    for (coef_name in coef_names) {
+        result <- data_list[[coef_name]]
+        nes_matrix[coef_name, result$ID] <- result$NES
+    }
+    
+    # Create the heatmap for the current coefficient
+    draw(Heatmap(nes_matrix, name = paste("NES", coef_name), col = col_fun, cluster_rows = TRUE, cluster_columns = TRUE, show_row_names = TRUE, show_column_names = TRUE, row_names_gp = gpar(fontsize = 8),
+    column_names_gp = gpar(fontsize = 8)), padding = unit(c(20, 2, 2, 2), "mm"))
+}
+```

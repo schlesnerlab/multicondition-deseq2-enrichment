@@ -499,3 +499,80 @@ better_dotplot <- function(gset, c_groups = contrast_groups) {
 save_dotplots <- function(d_plot, p_group, p_path = plot_path, gsea_type) {
   ggsave(filename = file.path(p_path, glue::glue("{p_group}_{gsea_type}_dplot.svg")), d_plot, width = 10, height = 10)
 }
+
+#' Get BM object via biomart in a stable fashion in case on esource is down
+#'
+#' @param species 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+stable_get_bm <- function(species) {
+  mart <- "www"
+  rounds <- 0
+  while (class(mart)[[1]] != "Mart") {
+    mart <- tryCatch(
+      {
+        # done here, because error function does not
+        # modify outer scope variables, I tried
+        if (mart == "www") rounds <- rounds + 1
+        # equivalent to useMart, but you can choose
+        # the mirror instead of specifying a host
+        biomaRt::useEnsembl(
+          biomart = "ENSEMBL_MART_ENSEMBL",
+          dataset = glue::glue("{species}_gene_ensembl"),
+          mirror = mart,
+          host = "https://nov2020.archive.ensembl.org"
+        )
+      },
+      error = function(e) {
+        # change or make configurable if you want more or
+        # less rounds of tries of all the mirrors
+        if (rounds >= 3) {
+          stop()
+        }
+        # hop to next mirror
+        mart <- switch(mart,
+                       useast = "uswest",
+                       uswest = "asia",
+                       asia = "www",
+                       www = {
+                         # wait before starting another round through the mirrors,
+                         # hoping that intermittent problems disappear
+                         Sys.sleep(30)
+                         "useast"
+                       },
+                       host = "https://nov2020.archive.ensembl.org"
+        )
+      }
+    )
+  }
+  mart
+}
+
+
+#' ENSEMBL IDs to ENSEMBL Gene symbol
+#'
+#' @param ens_id_vector 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+ensembl_to_symbol <- function(ens_id_vector) {
+  ens_short <- stringr::str_extract(ens_id_vector,
+                                    pattern = "^ENS[A-Z0-9]*")
+  mart <- stable_get_bm("mmusculus")
+  g2g <- biomaRt::getBM(
+    attributes = c( "ensembl_gene_id",
+                    "external_gene_name"),
+    filters = "ensembl_gene_id",
+    values = ens_short,
+    mart = mart,  
+  )
+  symbol_vec <- setNames(ens_short, nm = ens_short)
+  symbol_vec[g2g$ensembl_gene_id] <- g2g$external_gene_name
+  
+  symbol_vec
+}

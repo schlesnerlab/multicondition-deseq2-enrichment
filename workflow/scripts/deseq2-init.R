@@ -1,7 +1,7 @@
 # log <- file(snakemake@log[[1]], open="wt")
 # sink(log)
 # sink(log, type="message")
-
+library(readr)
 library("DESeq2")
 parallel <- FALSE
 if (snakemake@threads > 1) {
@@ -16,11 +16,11 @@ if (!exists("snakemake")) {
   BASE_DIR <- the_yaml$dirs$BASE_ANALYSIS_DIR
   cts <- file.path(BASE_DIR, "counts/all.tsv") %>%
     read.table(header = T, row.names = "gene", check.names = F)
-  coldata <- read.table("./data/Vasc_age2020/Vascage_samples.tsv",
+  coldata <- readr::read_delim("./data/Vasc_age2020/Vascage_samples.tsv",
     header = TRUE,
-    row.names = "sample",
+    row.names = "gene",
     check.names = FALSE,
-    stringsAsFactors = TRUE
+    stringsAsFactors = FALSE
   )
   # coldata %>% dplyr::filter(cell_type == "tumor") ->coldata
   # cts <- cts[,rownames(small_coldata)]
@@ -34,14 +34,18 @@ all_conditions <- names(snakemake@config$diffexp$contrasts)
 # by the way we create the count matrix
 cts <- read.table(snakemake@input[["counts"]],
   header = TRUE,
-  row.names = "gene",
+  row.names = 1,
   check.names = FALSE
 )
-coldata <- read.table(snakemake@params[["samples"]],
-  header = TRUE,
-  row.names = "sample", check.names = FALSE
-)
 
+
+#sample_mat <- readr::read_tsv(samples)
+
+coldata <- read_tsv(snakemake@params[["samples"]],
+  col_names = TRUE
+) 
+stopifnot("sample" %in% colnames(coldata))
+coldata <- coldata |> tibble::column_to_rownames(var = "sample")
 
 ## Reorder coldata rows to match cts col order (beacause deseq things)
 if (!all(colnames(cts) == rownames(coldata))) {

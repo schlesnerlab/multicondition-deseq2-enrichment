@@ -1,4 +1,5 @@
-library(tidyverse)
+#library(tidyverse)
+library(magrittr)
 library(DESeq2)
 deseq_obj <- readRDS(snakemake@input[["dds_obj"]])
 
@@ -11,7 +12,7 @@ if (ncol(deseq_obj) < 50) {
 saveRDS(rld, snakemake@output[["rld"]])
 
 norm_counts <- assay(rld, withDimnames = T) %>%
-  as_tibble(rownames = "gene")
+  tibble::as_tibble(rownames = "gene")
 og_gene_names <- norm_counts$gene
 norm_counts$gene <- stringr::str_extract(norm_counts$gene, pattern = "^ENS[A-Z0-9]*")
 # this variable holds a mirror name until useEnsembl succeeds ('www' is last, because of very frequent 'Internal Server

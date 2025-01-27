@@ -52,11 +52,11 @@ if (exists("snakemake")) {
   out_file <- snakemake@output[[1]]
   organism <- snakemake@config[["organism"]]
 } else {
-  yaml <- yaml::read_yaml("../../../configs/VascAge_Apelin_config.yaml")
-  comp_group <- names(yaml$diffexp$contrasts$apelin)[1]
+  yaml <- yaml::read_yaml("../../../configs/VascAge_config.yaml")
+  comp_group <- names(yaml$diffexp$contrasts$condition)[1]
   base_path <- yaml$dirs$BASE_ANALYSIS_DIR
   carnival_path <- file.path(
-    base_path, "results/carnival/apelin",
+    base_path, "results/inversecarnival/condition",
     glue::glue("{comp_group}_carnival_res.RDS.gz")
   )
 
@@ -160,7 +160,7 @@ Changes reflect the comparison based on the comparison group from this document
 
 ```{r pressure, fig.height=10, fig.width=16}
 plot_carn_network <- function(carn_res) {
-  ed <- carn_res$weightedSIF %>% dplyr::filter(Weight >= 10)
+  ed <- carn_res$weightedSIF
   colnames(ed) <- c("from", "sign", "to", "weight")
   nod <- data.frame(union(ed$from, ed$to))
 
@@ -173,7 +173,7 @@ plot_carn_network <- function(carn_res) {
     nodes = joined_nod,
     edges = ed
   ) %>%
-    ggraph(layout = "sugiyama") +
+    ggraph(layout = "auto") +
     geom_node_point(aes(color = AvgAct), size = 8) + scale_color_gradient2() +
     geom_edge_link(arrow = arrow(), aes(
       edge_colour = as.factor(sign),

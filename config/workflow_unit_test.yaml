@@ -95,3 +95,4 @@ run_carnival:
 cplex_solver: ""
 
 DKFZ: False
+glmmseq: False

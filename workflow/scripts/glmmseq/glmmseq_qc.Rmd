@@ -1,0 +1,190 @@
+---
+title: "Glmmseq QC plots"
+author: "Christian Heyer"
+date: "1/28/2021"
+output:
+  html_document: default
+---
+
+# Quality control metrics 
+
+Overview of quality control metrics for the glmmseq analysis.
+Intially, q values at 0.01 cutoff are calculated and histrograms are shown 
+for pvalues, qvalues and adjusted pvalues.
+
+```{r setup, include=FALSE}
+
+eval_seq <- function(glmmseq_obj) {
+  stats <- summary(glmmseq_obj)
+  cat("\n \n")
+  cat("### Pvalues \n")
+  
+  # Iterate over the columns and create a histogram for each one
+  pvals_plots <- purrr::map(colnames(glmmseq_obj@stats$pvals), function(column_name) {
+    # Create a data frame for pvals
+    pvals_df <- data.frame(pvals = glmmseq_obj@stats$pvals[, column_name])
+    p <- ggplot(pvals_df, aes(x = pvals)) +
+      geom_histogram(binwidth = 0.05, fill = "darkblue", color = "black") +
+      labs(title = paste(column_name), x = "Pvalues", y = "Frequency") +
+      theme_minimal()
+    return(p)
+  })
+  
+  cat("\n \n")
+  cat("### glmmseq Qval Res \n")
+  glmmseq_obj <- glmmSeq::glmmQvals(glmmseq_obj, cutoff = 0.01)
+  
+  # Iterate over the columns and create a histogram for each one
+  qvals_plots <- purrr::map(colnames(glmmseq_obj@stats$qvals), function(column_name) {
+    # Create a data frame for qvals
+    qvals_df <- data.frame(qvals = glmmseq_obj@stats$qvals[, column_name])
+    ggplot(qvals_df, aes(x = qvals)) +
+      geom_histogram(binwidth = 0.05, fill = "darkblue", color = "black") +
+      labs(title = paste(column_name), x = "Qvals", y = "Frequency") +
+      theme_minimal()
+  })
+  
+  x <- apply(glmmseq_obj@stats$pvals, 2, p.adjust, method = "BH")
+  
+  # Iterate over the columns and create a histogram for each one
+  adj_pvals_plots <- purrr::map(colnames(x), function(column_name) {
+    # Create a data frame for adjusted pvals
+    adj_pvals_df <- data.frame(adj_pvals = x[, column_name])
+    ggplot(adj_pvals_df, aes(x = adj_pvals)) +
+      geom_histogram(binwidth = 0.05, fill = "darkblue", color = "black") +
+      labs(title = paste(column_name), x = "Adjusted Pvals", y = "Frequency") +
+      theme_minimal()
+  })
+  
+  list(pvals_plots = pvals_plots, qvals_plots = qvals_plots, adj_pvals_plots = adj_pvals_plots, glmmseq_obj = glmmseq_obj)
+}
+
+```
+
+
+## Overview of Q-values
+
+```{r}
+library(glmmSeq)
+library(ggplot2)
+library(purrr)
+library(dplyr)
+library(patchwork)
+if (exists("snakemake")) {
+    glmmseq_obj <- snakemake@input[["glmmseq_obj"]]
+    glmmseq_refit <- snakemake@input[["glmmseq_refit"]]
+} else { 
+
+}
+
+glmmseq_results_all<- readRDS(glmmseq_obj)
+result <- eval_seq(glmmseq_results_all$norm_counts)
+
+```
+
+Summary of Singular fits
+
+```{r results='asis'}
+
+glmmseq_norm_counts <- result$glmmseq_obj
+cat("\n \n")
+cat("### Overview of Singular fits \n ")
+table(as.data.frame(result$glmmseq_obj@optInfo)) %>% print()
+pvals_plots <- result$pvals_plots
+qvals_plots <- result$qvals_plots
+adj_pvals_plots <- result$adj_pvals_plots
+```
+
+## Plots {.tabset}
+
+Plot Overview
+
+### Pvalues Plots 
+
+```{r pvals_plots, echo=FALSE}
+# Use patchwork to combine the pvals plots
+library(patchwork)
+wrap_plots(pvals_plots, ncol = 4)
+```
+
+### Qvals Plots
+
+```{r qvals_plots, echo=FALSE}
+# Use patchwork to combine the qvals plots
+wrap_plots(qvals_plots, ncol = 4)
+```
+
+### Adjusted Pvals Plots
+
+```{r adj_pvals_plots, echo=FALSE}
+# Use patchwork to combine the adjusted pvals plots
+wrap_plots(adj_pvals_plots, ncol = 4)
+```
+
+## Theoretical quantile plots
+```{r}
+# Calculate the theoretical quantiles
+pvals <- glmmseq_norm_counts@stats$pvals 
+pvals <- pvals[is.finite(pvals) & pvals > 0]
+
+# Create a data frame for the p-values
+pvals_df <- data.frame(pvals = -log10(pvals))
+# Create the QQ plot
+# Create the QQ plot
+ggplot(pvals_df, aes(sample = pvals)) +
+  geom_qq(distribution = qexp, dparams = list(rate = log(10))) + 
+  stat_qq_line(distribution = qexp, dparams = list(rate = log(10))) +
+  scale_y_continuous(labels = function(x) format(signif(10^(-x), digits = 2), scientific = TRUE)) +
+  scale_x_continuous(labels = function(x) format(signif(10^(-x), digits = 2), scientific = TRUE)) +
+  labs(x = "Theoretical Quantiles", y = "Observed P-Values") +
+  theme_minimal()
+
+ggplot(pvals_df, aes(sample = pvals)) +
+  geom_qq(distribution = qunif) +  # Use uniform distribution for the QQ plot
+  stat_qq_line(distribution = qunif) +  # Add the reference line for uniform distribution
+#  scale_y_continuous(labels = function(x) format(signif(10^(-x), digits = 2), scientific = TRUE)) +
+#  scale_x_continuous(labels = function(x) format(signif(10^(-x), digits = 2), scientific = TRUE)) +
+  labs(x = "Theoretical Quantiles (Uniform)", y = "Observed P-Values") +
+  theme_minimal()
+```
+
+## QQplot
+
+```{r, fig.width= 12, fig.height =8}
+
+
+# Corrected function to create a QQ plot with appropriate axis labels in scientific notation
+create_qq_plot <- function(pvals, column_name, ylim) {
+  # Filter out non-finite and zero p-values
+  pvals <- pvals[is.finite(pvals) & pvals > 0]
+  
+  # Create a data frame for the p-values
+  pvals_df <- data.frame(pvals = pvals)
+  
+  # Create the QQ plot
+  plot <- ggplot(pvals_df, aes(sample = pvals)) +
+    geom_qq(distribution = qunif) +  # Use uniform distribution for the QQ plot
+  stat_qq_line(distribution = qunif) +  # Add the reference line for uniform distribution
+ #   scale_y_continuous(labels = function(x) format(signif(10^(-x), digits = 2), scientific = TRUE)) +
+#    scale_x_continuous(labels = function(x) format(signif(10^(-x), digits = 2), scientific = TRUE)) +
+    labs(x = "Theoretical Quantiles", y = "Observed P-Values", title = column_name) +
+    theme_minimal() +
+    coord_cartesian(ylim = c(0, ylim))  # Set the y-axis limits
+  
+  return(plot)
+}
+max_pval <- glmmseq_norm_counts@stats$pvals %>%
+  as.data.frame() %>%
+  purrr::map_dbl(~max((.x[is.finite(.x) & .x > 0]), na.rm = TRUE)) %>% max()
+
+
+# Iterate over the columns and create a plot for each one
+# Iterate over the columns and create a plot for each one
+plots <- glmmseq_norm_counts@stats$pvals %>%
+  as.data.frame() %>%
+  purrr::imap(~create_qq_plot(.x, .y, max_pval))
+
+# Arrange the plots in a grid
+patchwork::wrap_plots(plots, ncol = 4)
+
+```

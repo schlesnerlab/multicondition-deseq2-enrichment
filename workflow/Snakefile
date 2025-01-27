@@ -117,6 +117,18 @@ if config["DKFZ"]:
         ]
     )
 
+if config["glmmseq"]:
+    salmon_files.extend(
+        [
+            join(BASE_ANALYSIS_DIR, "glmmseq/enrichment.html"),
+            join(BASE_ANALYSIS_DIR, "glmmseq/qc.html"),
+            expand(
+                join(BASE_ANALYSIS_DIR, "glmmseq/{var}_heatmaps.png"),
+                var=config["glmmseq"]["test_group"].keys(),
+            ),
+        ]
+    )
+
 diffexp_files = get_diffxp_files()
 
 
@@ -146,6 +158,11 @@ report: "report/workflow.rst"
 
 include: "rules/diffexp.smk"
 include: "rules/Carnival.smk"
+
+
+if config["glmmseq"]:
+
+    include: "rules/glmmseq.smk"
 
 
 if config["DKFZ"]:
