@@ -1,18 +1,23 @@
 
 library(ComplexHeatmap)
+library(circlize)
 library(glmmSeq)
-
+library(seriation)
+library(DESeq2)
+register_DendSer()
 if (exists("snakemake")) {
     glmmseq_obj <- snakemake@input[["glmmseq_obj"]]
     corrected_counts <- snakemake@input[["batch_corrected_counts"]]
-    out_png <- snakemake@output[["png_file"]]
+    png_file <- snakemake@output[["png_file"]]
     var <- snakemake@wildcards[["var"]]
-    coef <- snakemake@params[["coef"]]
+    coef_id <- snakemake@params[["coef"]]
+    col_data_to_plot <- snakemake@config[["pca"]][["labels"]] |> unlist()
 } else {
     glmmseq_obj <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/glmmseq/glmmseq/glmmseq_obj.rds.gz"
     corrected_counts <- "/omics/odcf/analysis/OE0228_projects/VascularAging/rna_sequencing/glmmseq/counts/batch_corrected_counts.rds"
-    coef <- "ageaged"
-    var <- "age"
+    coef_id <- "EC_statustumor:Aplnr_KOKO"
+    var <- "EC_status:Aplnr_KO"
+    col_data_to_plot <- c("EC_status", "Aplnr_KO")
 }
 annotation_colors <- list(
   age = c(
@@ -55,9 +60,12 @@ plot_heatmap<- function(coef,vst_obj = vst_dds, glmm_obj =  glmmseq_norm_counts,
     # get vst normalized expression data 
     vst_data <- assay(vst_obj)
 
-    # retain only genes with qvals < 0.05 and ceef_value > abs(0.5)
+    # retain only genes with qvals < 0.05 and ceef_value > abs(0.5)o
+    selected_genes <- which(qvals < 0.05 )
+    if (length(selected_genes) > 200) {
     selected_genes <- which(qvals < qval_filt & abs(coef_values) > coef_filt &
                               meanexp > meanExp_cutoff)
+    }
     length(selected_genes)
     
     if (use_vst) {
@@ -167,19 +175,20 @@ plot_heatmap<- function(coef,vst_obj = vst_dds, glmm_obj =  glmmseq_norm_counts,
 
 # Read_glmmseq_obj
 glmmseq_obj <- readRDS(glmmseq_obj)
+glmmseq_obj$norm_counts <- glmmQvals(glmmseq_obj$norm_counts)
 # Read DDs Object 
 vst_dds <- readRDS(corrected_counts)
 # run_vst
-vst_dds <- vst(vst_dds[, rownames(glmmseq_obj$norm_counts@countdata)])
+vst_dds <- vst(vst_dds[rownames(glmmseq_obj$norm_counts@countdata),])
 
 
 plot_heatmap(
-  coef = c(var, coef),
+  coef = c(var, coef_id),
   vst_obj = vst_dds,
   glmm_obj = glmmseq_obj$norm_counts,
   z_score = TRUE,
   use_vst = TRUE,
-  coldata_to_plot = c("age", "EC_status", "Apln_treatment", "Aplnr_KO", "experiment"),
+  coldata_to_plot = col_data_to_plot,
   n_genes = 30,
   qval_filt = 0.01,
   coef_filt = 0.8,

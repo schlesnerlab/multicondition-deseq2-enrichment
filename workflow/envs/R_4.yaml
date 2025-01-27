@@ -1,12 +1,15 @@
-name: R
+name: R_4
 channels:
   - conda-forge
   - bioconda
 dependencies:
+  - gcc
+  - gcc_linux-64
   - bioconductor-annotationhub
   - bioconductor-apeglm
   - bioconductor-bsgenome.hsapiens.ucsc.hg38
   - bioconductor-bsgenome.mmusculus.ucsc.mm10
+  - bioconductor-bcellviper
   - bioconductor-carnival
   - bioconductor-chipseeker
   - bioconductor-clusterprofiler
@@ -16,6 +19,7 @@ dependencies:
   #- bioconductor-dorothea
   - bioconductor-ensembldb
   - bioconductor-enhancedvolcano
+  - bioconductor-genefilter
   - bioconductor-genomicranges
   - bioconductor-mitch
   - bioconductor-omnipathr
@@ -30,6 +34,7 @@ dependencies:
   - bioconductor-viper
   - r-babelgene
   - r-data.table
+  - r-dendextend
   - r-devtools
   - r-dt
   - r-furrr
@@ -48,6 +53,7 @@ dependencies:
   - r-reshape2
   - r-rmarkdown
   - r-rvcheck
+  - r-seriation
   - r-svglite
   - r-tidyverse
   - r-MASS
@@ -59,4 +65,5 @@ dependencies:
   - bioconductor-qvalue
   - r-emmeans
   - r-pbapply
+  - r-xml
   - r-pbmcapply
